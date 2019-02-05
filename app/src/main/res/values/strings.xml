@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">ArduinoBluetooth</string>
+    <string name="title_activity_my">ArduinoBluetooth</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="status">Status:</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="read">Read:</string>
+    <string name="write">Write</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="Light">Lights</string>
+    <string name="Lights_off">Lights off</string>
+    <string name="Lights_on">Lights on</string>
+    <string name="autobrake">Autobrake</string>
+    <string name="autobrake_off">Autobrake off</string>
+    <string name="autobrake_on">Autobrake on</string>
+    <string name="up">Up</string>
+    <string name="down">Down</string>
+    <string name="HourAngle">Часовой угол</string>
+    <string name="Declanation">Склонение</string>
+    <string name="Degrees">град</string>
+    <string name="Minutes">мин</string>
+    <string name="Seconds">сек</string>
+    <string name="Hours">ч</string>
+    <string name="set">Set</string>
+    <string name="setGoto">Goto</string>
+    <string name="TextSet">SET</string>
+    <string name="textGoto">GOTO</string>
+
+</resources>
