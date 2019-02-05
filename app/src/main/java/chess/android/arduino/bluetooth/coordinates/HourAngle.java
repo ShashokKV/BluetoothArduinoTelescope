@@ -16,6 +16,10 @@ public class HourAngle  {
         return timer;
     }
 
+    public void setTimer(LocalTime timer) {
+        this.timer = timer;
+    }
+
     public double toDegrees() {
         return (((double)timer.getHour()*3600.0d)+((double)timer.getMinute()*60.0d)+(double)timer.getSecond())*15.0d/3600.0d;
     }

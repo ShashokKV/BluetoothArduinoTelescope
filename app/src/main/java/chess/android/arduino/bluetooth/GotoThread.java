@@ -78,7 +78,8 @@ public class GotoThread extends Thread {
             } catch (InterruptedException e) {
                 break;
             }
-            hourAngle.getTimer().plusSeconds(1);
+
+            hourAngle.setTimer(hourAngle.getTimer().plusSeconds(1));
         }
     }
 

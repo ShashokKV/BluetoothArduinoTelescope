@@ -53,7 +53,7 @@ public class BluetoothActivity extends Activity {
     Handler btWriteHandler;
     Handler gotoHandler;
 
-    BluetoothActivity bluetoothActivity;
+    boolean blockFromChange;
 
     /**
      * Launch the Bluetooth thread.
@@ -94,7 +94,6 @@ public class BluetoothActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        bluetoothActivity = this;
         setContentView(R.layout.activity_bluetooth);
 
         if (savedInstanceState!=null) {
@@ -121,10 +120,14 @@ public class BluetoothActivity extends Activity {
         gotoToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if (joystickThread!=null) joystickThread.interrupt();
+                JoystickView joystick = findViewById(R.id.joystickView);
                 if (isChecked) {
                     beginTrack();
-                    JoystickView joystick = findViewById(R.id.joystickView);
                     joystick.setEnabled(false);
+                }else{
+                    if (gotoThread!=null) gotoThread.interrupt();
+                    gotoThread=null;
+                    joystick.setEnabled(true);
                 }
                 gotoOn = isChecked;
             }
@@ -168,6 +171,7 @@ public class BluetoothActivity extends Activity {
     class AngleTextWatcher implements TextWatcher {
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
         }
 
         @Override
@@ -176,7 +180,13 @@ public class BluetoothActivity extends Activity {
 
         @Override
         public void afterTextChanged(Editable s) {
-            if (bluetoothActivity.gotoOn) bluetoothActivity.beginTrack();
+            if (gotoOn) {
+                EquatorialCoordinates equatorialCoordinates = new EquatorialCoordinates(getDeclination(), getHourAngle());
+                Message message = Message.obtain();
+                message.obj = equatorialCoordinates;
+                gotoHandler.sendMessage(message);
+            }
+            blockFromChange = false;
         }
     }
 
@@ -189,10 +199,11 @@ public class BluetoothActivity extends Activity {
     }
 
     void beginTrack() {
-        //if (gotoThread!=null) gotoThread.interrupt();
+        if (gotoThread!=null) gotoThread.interrupt();
         EquatorialCoordinates equatorialCoordinates = new EquatorialCoordinates(getDeclination(), getHourAngle());
         gotoThread = new GotoThread(equatorialCoordinates, new GotoHandler(this), btt.getWriteHandler());
         gotoThread.start();
+        gotoHandler = gotoThread.getWriteHandler();
     }
 
     private HourAngle getHourAngle() {
@@ -207,6 +218,8 @@ public class BluetoothActivity extends Activity {
     }
 
     private void setHourAngle(HourAngle hourAngle) {
+        if (blockFromChange) return;
+        System.out.println("setting hour angle");
         TextView hourTextView = findViewById(R.id.hAngHour);
         TextView minuteTextView = findViewById(R.id.hAngMinute);
         TextView secondsTextView = findViewById(R.id.hAngSecond);
