@@ -1,4 +1,4 @@
-package chess.android.arduino.bluetooth;
+package chess.android.arduino.telescope.threads;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -68,7 +68,7 @@ public class BluetoothThread extends Thread {
      * and a Handler for received messages.
      *
      */
-    BluetoothThread(String address, Handler handler) {
+    public BluetoothThread(String address, Handler handler) {
 
         this.address = address.toUpperCase();
         this.readHandler = handler;
@@ -80,7 +80,7 @@ public class BluetoothThread extends Thread {
      * Return the write handler for this connection. Messages received by this
      * handler will be written to the Bluetooth socket.
      */
-    Handler getWriteHandler() {
+    public Handler getWriteHandler() {
         return writeHandler;
     }
 

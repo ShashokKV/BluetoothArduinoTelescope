@@ -1,16 +1,13 @@
-package chess.android.arduino.bluetooth;
+package chess.android.arduino.telescope.threads;
 
-import android.location.Location;
-import android.location.LocationListener;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 
 import java.lang.ref.WeakReference;
 
-import chess.android.arduino.bluetooth.coordinates.Declination;
-import chess.android.arduino.bluetooth.coordinates.EquatorialCoordinates;
-import chess.android.arduino.bluetooth.coordinates.HourAngle;
+import chess.android.arduino.telescope.coordinates.Declination;
+import chess.android.arduino.telescope.coordinates.EquatorialCoordinates;
+import chess.android.arduino.telescope.coordinates.HourAngle;
 
 import static java.lang.Math.acos;
 import static java.lang.Math.asin;
@@ -28,69 +25,52 @@ public class GotoThread extends Thread {
     private final Handler writeHandler;
     private double latitude;
 
-    GotoThread(EquatorialCoordinates equatorialCoordinates, Handler activityHandler, Handler btHandler) {
+    public GotoThread(double latitude, EquatorialCoordinates equatorialCoordinates, Handler activityHandler, Handler btHandler) {
         this.activityHandler = activityHandler;
         this.btHandler = btHandler;
         this.writeHandler = new WriteHandler(this);
         this.equatorialCoordinates = equatorialCoordinates;
         this.hourAngle = equatorialCoordinates.getHourAngle();
+        this.latitude = latitude;
     }
 
-    void setActivityHandler(Handler activityHandler) {
+    public void setActivityHandler(Handler activityHandler) {
         this.activityHandler = activityHandler;
     }
 
     public void run() {
-        new LocationListener() {
-            public void onLocationChanged(Location location) {
-                latitude = location.getLatitude();
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-
-            }
-
-            @Override
-            public void onProviderEnabled(String provider) {
-
-            }
-
-            @Override
-            public void onProviderDisabled(String provider) {
-
-            }
-        };
-
         long timeElapsed;
         while (!this.isInterrupted()) {
             timeElapsed = System.currentTimeMillis();
+
             Message message = Message.obtain();
+            hourAngle = equatorialCoordinates.getHourAngle();
             message.obj = hourAngle;
             activityHandler.sendMessage(message);
 
             Message coordinatesMessage = Message.obtain();
-            equatorialCoordinates.setHourAngle(hourAngle);
             coordinatesMessage.obj = getHorizontalCoordinates(equatorialCoordinates);
             btHandler.sendMessage(coordinatesMessage);
+
+            hourAngle.setTimer(hourAngle.getTimer().plusSeconds(1));
+            equatorialCoordinates.setHourAngle(hourAngle);
             try {
                 Thread.sleep(1000 - (System.currentTimeMillis() - timeElapsed));
             } catch (InterruptedException e) {
                 break;
             }
-
-            hourAngle.setTimer(hourAngle.getTimer().plusSeconds(1));
         }
     }
 
     private String getHorizontalCoordinates(EquatorialCoordinates equatorialCoordinates) {
         HourAngle hourAngle = equatorialCoordinates.getHourAngle();
         Declination declination = equatorialCoordinates.getDeclination();
+
         double lat = toRadians(latitude);
         double decl = toRadians(declination.toDegrees());
-
         double hour = toRadians(hourAngle.toDegrees());
-        double alt = asin(sin(decl) * sin(lat) + cos(decl) * cos(lat) * cos(hour));
+
+        double alt = toDegrees(asin(sin(decl) * sin(lat) + cos(decl) * cos(lat) * cos(hour)));
         double a = toDegrees(acos((sin(decl) - sin(alt) * sin(lat)) / (cos(alt) * cos(lat))));
 
         double az;
@@ -100,10 +80,6 @@ public class GotoThread extends Thread {
             az = 360 - a;
         }
 
-        alt = toDegrees(alt);
-
-        System.out.println("alt=" + alt);
-        System.out.println("Az=" + az);
         return "alt=" + alt+"&az="+az;
     }
 
@@ -111,14 +87,13 @@ public class GotoThread extends Thread {
         this.equatorialCoordinates = equatorialCoordinates;
     }
 
-    Handler getWriteHandler() {
+    public Handler getWriteHandler() {
         return writeHandler;
     }
 
-    void setBluetoothHandler(Handler btHandler) {
+    public void setBluetoothHandler(Handler btHandler) {
         this.btHandler = btHandler;
     }
-
 
     public static class WriteHandler extends Handler {
         private final WeakReference<GotoThread> gotoThreadWeakReference;
@@ -133,5 +108,4 @@ public class GotoThread extends Thread {
             gotoThread.setEquatorialCoordinates((EquatorialCoordinates) msg.obj);
         }
     }
-
 }

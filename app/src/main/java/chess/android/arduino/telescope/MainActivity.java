@@ -1,11 +1,15 @@
-package chess.android.arduino.bluetooth;
+package chess.android.arduino.telescope;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
@@ -16,28 +20,29 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import java.lang.ref.WeakReference;
-import java.util.Locale;
 
-import chess.android.arduino.bluetooth.coordinates.Declination;
-import chess.android.arduino.bluetooth.coordinates.EquatorialCoordinates;
-import chess.android.arduino.bluetooth.coordinates.HourAngle;
+import chess.android.arduino.telescope.coordinates.Declination;
+import chess.android.arduino.telescope.coordinates.EquatorialCoordinates;
+import chess.android.arduino.telescope.coordinates.HourAngle;
+import chess.android.arduino.telescope.filters.InputFilterMinMax;
+import chess.android.arduino.telescope.threads.BluetoothThread;
+import chess.android.arduino.telescope.threads.GotoThread;
+import chess.android.arduino.telescope.threads.JoystickThread;
 import io.github.controlwear.virtual.joystick.android.JoystickView;
 
 /**
  * Simple UI demonstrating how to connect to a Bluetooth device,
  * send and receive messages using Handlers, and update the UI.
  */
-public class BluetoothActivity extends Activity {
+public class MainActivity extends Activity {
 
     public static final int DEFAULT_STRENGTH = 0;
     // Tag for logging
-    private static final String TAG = "BluetoothActivity";
+    private static final String TAG = "MainActivity";
     // MAC address of remote Bluetooth device
     // Replace this with the address of your own module
     private static final String address = "00:06:66:66:33:89";
 
-    private static final int Y_MAX = 100;
-    private static final int X_MAX = 100;
     private static final String CONNECTED_STATE = "connectedState";
     private static final String GOTO_STATE = "gotoState";
     public static final int DEFAULT_ANGLE = 0;
@@ -52,8 +57,6 @@ public class BluetoothActivity extends Activity {
     // Handler for writing messages to the Bluetooth connection
     Handler btWriteHandler;
     Handler gotoHandler;
-
-    boolean blockFromChange;
 
     /**
      * Launch the Bluetooth thread.
@@ -93,6 +96,14 @@ public class BluetoothActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        try {
+            if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ) {
+                ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 101);
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bluetooth);
 
@@ -113,6 +124,26 @@ public class BluetoothActivity extends Activity {
             gotoThread.setActivityHandler(new GotoHandler(this));
             gotoThread.setBluetoothHandler(btt.getWriteHandler());
         }
+
+        InputFilterMinMax secMinInputFilter = new InputFilterMinMax(0, 59);
+        EditText editText = findViewById(R.id.hAngHour);
+        editText.addTextChangedListener(new EditTextWatcher(editText));
+        editText.setFilters(new InputFilter[]{new InputFilterMinMax(0, 23)});
+        editText = findViewById(R.id.hAngMinute);
+        editText.addTextChangedListener(new EditTextWatcher(editText));
+        editText.setFilters(new InputFilter[]{secMinInputFilter});
+        editText = findViewById(R.id.hAngSecond);
+        editText.addTextChangedListener(new EditTextWatcher(editText));
+        editText.setFilters(new InputFilter[]{secMinInputFilter});
+        editText = findViewById(R.id.declDegree);
+        editText.addTextChangedListener(new EditTextWatcher(editText));
+        editText.setFilters(new InputFilter[]{new InputFilterMinMax(-89, 89)});
+        editText = findViewById(R.id.declMinute);
+        editText.addTextChangedListener(new EditTextWatcher(editText));
+        editText.setFilters(new InputFilter[]{secMinInputFilter});
+        editText = findViewById(R.id.declSecond);
+        editText.addTextChangedListener(new EditTextWatcher(editText));
+        editText.setFilters(new InputFilter[]{secMinInputFilter});
 
         ToggleButton gotoToggle = findViewById(R.id.gotoButton);
         gotoToggle.setEnabled(connected);
@@ -139,11 +170,11 @@ public class BluetoothActivity extends Activity {
             @Override
             public void onMove(int angle, int strength) {
                 Message msg = Message.obtain();
-                String coordinates = parseJoystickInput(angle, strength);
+                String coordinates = JoystickThread.parseJoystickInput(angle, strength);
                 msg.obj = coordinates;
                 if (joystickThread!=null) joystickThread.interrupt();
                 if (angle != DEFAULT_ANGLE && strength != DEFAULT_STRENGTH) {
-                    joystickThread = new Thread(new JoystickRunner(btWriteHandler, msg));
+                    joystickThread = new JoystickThread(btWriteHandler, msg);
                     joystickThread.start();
                 }else{
                     btWriteHandler.sendMessage(msg);
@@ -153,57 +184,23 @@ public class BluetoothActivity extends Activity {
                 tv.setText(coordinates);
             }
         });
-
-        EditText editText = findViewById(R.id.hAngHour);
-        editText.addTextChangedListener(new AngleTextWatcher());
-        editText = findViewById(R.id.hAngMinute);
-        editText.addTextChangedListener(new AngleTextWatcher());
-        editText = findViewById(R.id.hAngSecond);
-        editText.addTextChangedListener(new AngleTextWatcher());
-        editText = findViewById(R.id.declDegree);
-        editText.addTextChangedListener(new AngleTextWatcher());
-        editText = findViewById(R.id.declMinute);
-        editText.addTextChangedListener(new AngleTextWatcher());
-        editText = findViewById(R.id.declSecond);
-        editText.addTextChangedListener(new AngleTextWatcher());
     }
 
-    class AngleTextWatcher implements TextWatcher {
-        @Override
-        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-        }
-
-        @Override
-        public void onTextChanged(CharSequence s, int start, int before, int count) {
-        }
-
-        @Override
-        public void afterTextChanged(Editable s) {
-            if (gotoOn) {
-                EquatorialCoordinates equatorialCoordinates = new EquatorialCoordinates(getDeclination(), getHourAngle());
-                Message message = Message.obtain();
-                message.obj = equatorialCoordinates;
-                gotoHandler.sendMessage(message);
-            }
-            blockFromChange = false;
-        }
-    }
-
-    private String parseJoystickInput(int angle, int strength) {
-        int x, y;
-        x = Double.valueOf((strength*X_MAX*Math.cos(Math.toRadians(angle)))/100).intValue();
-        y = Double.valueOf((strength*Y_MAX*Math.sin(Math.toRadians(angle)))/100).intValue();
-
-        return "X"+x+"#"+"Y"+y;
-    }
-
-    void beginTrack() {
+    private void beginTrack() {
         if (gotoThread!=null) gotoThread.interrupt();
+        GpsTracker gpsTracker = new GpsTracker(MainActivity.this);
+        double latitude;
+        if (gpsTracker.canGetLocation()) {
+            latitude = gpsTracker.getLatitude();
+        }else{
+            Toast.makeText(MainActivity.this, "Can't get current location!", Toast.LENGTH_LONG).show();
+            return;
+        }
         EquatorialCoordinates equatorialCoordinates = new EquatorialCoordinates(getDeclination(), getHourAngle());
-        gotoThread = new GotoThread(equatorialCoordinates, new GotoHandler(this), btt.getWriteHandler());
+        gotoThread = new GotoThread(latitude, equatorialCoordinates, new GotoHandler(this), btt.getWriteHandler());
         gotoThread.start();
         gotoHandler = gotoThread.getWriteHandler();
+        gpsTracker.stopUsingGPS();
     }
 
     private HourAngle getHourAngle() {
@@ -215,17 +212,6 @@ public class BluetoothActivity extends Activity {
         TextView secondsTextView = findViewById(R.id.hAngSecond);
         second = Integer.parseInt(secondsTextView.getText().toString());
         return new HourAngle(hour,minute,second);
-    }
-
-    private void setHourAngle(HourAngle hourAngle) {
-        if (blockFromChange) return;
-        System.out.println("setting hour angle");
-        TextView hourTextView = findViewById(R.id.hAngHour);
-        TextView minuteTextView = findViewById(R.id.hAngMinute);
-        TextView secondsTextView = findViewById(R.id.hAngSecond);
-        hourTextView.setText(String.format(Locale.ENGLISH,"%d", hourAngle.getTimer().getHour()));
-        minuteTextView.setText(String.format(Locale.ENGLISH,"%d", hourAngle.getTimer().getMinute()));
-        secondsTextView.setText(String.format(Locale.ENGLISH,"%d", hourAngle.getTimer().getSecond()));
     }
 
     private Declination getDeclination() {
@@ -246,25 +232,54 @@ public class BluetoothActivity extends Activity {
         super.onSaveInstanceState(savedInstanceState);
     }
 
-    static class GotoHandler extends Handler {
-        private final WeakReference<BluetoothActivity> bluetoothActivityWeakReference;
+    class EditTextWatcher implements TextWatcher {
+        private EditText editText;
 
-        GotoHandler(BluetoothActivity activity) {
+        EditTextWatcher(EditText editText) {
+            this.editText = editText;
+        }
+        @Override
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+        }
+
+        @Override
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+            if (editText.getTag()!=null && editText.getTag().toString().equals("thread")) return;
+            editText.setTag("user");
+            if (s.toString().equals("")||s.toString().equals("-")) return;
+            if (gotoOn) {
+                EquatorialCoordinates eqCoords = new EquatorialCoordinates(getDeclination(), getHourAngle());
+                Message message = Message.obtain();
+                message.obj = eqCoords;
+                gotoHandler.sendMessage(message);
+            }
+            editText.setTag(null);
+        }
+
+        @Override
+        public void afterTextChanged(Editable s) {
+        }
+    }
+
+    static class GotoHandler extends Handler {
+        private final WeakReference<MainActivity> bluetoothActivityWeakReference;
+
+        GotoHandler(MainActivity activity) {
             bluetoothActivityWeakReference = new WeakReference<>(activity);
         }
 
         @Override
         public void handleMessage(Message msg) {
             HourAngle hourAngle = (HourAngle) msg.obj;
-            BluetoothActivity bluetoothActivity = bluetoothActivityWeakReference.get();
-            bluetoothActivity.setHourAngle(hourAngle);
+            MainActivity mainActivity = bluetoothActivityWeakReference.get();
+            hourAngle.setToView(mainActivity);
         }
     }
 
     static class BTHandler extends Handler {
-        private final WeakReference<BluetoothActivity> bActivity;
+        private final WeakReference<MainActivity> bActivity;
 
-        BTHandler(BluetoothActivity activity) {
+        BTHandler(MainActivity activity) {
             bActivity = new WeakReference<>(activity);
         }
 
@@ -274,32 +289,32 @@ public class BluetoothActivity extends Activity {
 
             String s = (String) message.obj;
 
-            BluetoothActivity bluetoothActivity = bActivity.get();
+            MainActivity mainActivity = bActivity.get();
 
             // Do something with the message
             switch (s) {
                 case "CONNECTED": {
-                    Toast.makeText(bluetoothActivity.getApplicationContext(),
+                    Toast.makeText(mainActivity.getApplicationContext(),
                             "Connected.", Toast.LENGTH_SHORT).show();
-                    bluetoothActivity.findViewById(R.id.joystickView).setEnabled(true);
-                    bluetoothActivity.findViewById(R.id.gotoButton).setEnabled(true);
-                    bluetoothActivity.connected = true;
+                    mainActivity.findViewById(R.id.joystickView).setEnabled(true);
+                    mainActivity.findViewById(R.id.gotoButton).setEnabled(true);
+                    mainActivity.connected = true;
                     break;
                 }
                 case "DISCONNECTED": {
-                    Toast.makeText(bluetoothActivity.getApplicationContext(),
+                    Toast.makeText(mainActivity.getApplicationContext(),
                             "Disconnected.", Toast.LENGTH_SHORT).show();
-                    bluetoothActivity.findViewById(R.id.joystickView).setEnabled(false);
-                    bluetoothActivity.findViewById(R.id.gotoButton).setEnabled(false);
-                    bluetoothActivity.connected = false;
+                    mainActivity.findViewById(R.id.joystickView).setEnabled(false);
+                    mainActivity.findViewById(R.id.gotoButton).setEnabled(false);
+                    mainActivity.connected = false;
                     if (joystickThread!=null) joystickThread.interrupt();
                     break;
                 }
                 case "CONNECTION FAILED": {
-                    Toast.makeText(bluetoothActivity.getApplicationContext(),
+                    Toast.makeText(mainActivity.getApplicationContext(),
                             "Connection failed!.", Toast.LENGTH_SHORT).show();
                     btt = null;
-                    bluetoothActivity.connected = false;
+                    mainActivity.connected = false;
                     break;
                 }
                 default: {

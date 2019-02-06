@@ -1,4 +1,4 @@
-package chess.android.arduino.bluetooth.coordinates;
+package chess.android.arduino.telescope.coordinates;
 
 public class Declination {
     private int degree;
