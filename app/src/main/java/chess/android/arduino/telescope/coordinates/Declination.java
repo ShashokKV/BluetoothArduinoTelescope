@@ -11,19 +11,7 @@ public class Declination {
         this.second = second;
     }
 
-    public int getSecond() {
-        return second;
-    }
-
-    public int getMinute() {
-        return minute;
-    }
-
-    public int getDegree() {
-        return degree;
-    }
-
     public double toDegrees() {
-        return (((double)degree*3600.0d)+((double)minute*60.0d)+(double)second)/3600.0d;
+        return ((degree*3600.0d)+(minute*60.0d)+second*1.0d)/3600.0d;
     }
 }

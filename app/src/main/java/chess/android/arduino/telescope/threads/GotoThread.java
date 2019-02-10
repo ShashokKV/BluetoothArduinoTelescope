@@ -52,7 +52,7 @@ public class GotoThread extends Thread {
             coordinatesMessage.obj = getHorizontalCoordinates(equatorialCoordinates);
             btHandler.sendMessage(coordinatesMessage);
 
-            hourAngle.setTimer(hourAngle.getTimer().plusSeconds(1));
+            hourAngle.plusSecond();
             equatorialCoordinates.setHourAngle(hourAngle);
             try {
                 Thread.sleep(1000 - (System.currentTimeMillis() - timeElapsed));
@@ -70,8 +70,9 @@ public class GotoThread extends Thread {
         double decl = toRadians(declination.toDegrees());
         double hour = toRadians(hourAngle.toDegrees());
 
-        double alt = toDegrees(asin(sin(decl) * sin(lat) + cos(decl) * cos(lat) * cos(hour)));
-        double a = toDegrees(acos((sin(decl) - sin(alt) * sin(lat)) / (cos(alt) * cos(lat))));
+        double alt = asin((sin(decl) * sin(lat)) + (cos(decl) * cos(lat) * cos(hour)));
+        double a = toDegrees(acos((sin(decl) - (sin(alt) * sin(lat))) / (cos(alt) * cos(lat))));
+        alt = toDegrees(alt);
 
         double az;
         if (sin(hour) < 0) {

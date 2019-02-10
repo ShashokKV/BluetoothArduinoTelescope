@@ -112,6 +112,17 @@ public class MainActivity extends Activity {
             gotoOn = savedInstanceState.getBoolean(GOTO_STATE);
         }
 
+        View connectButton = findViewById(R.id.connectButton);
+        View disconnectButton = findViewById(R.id.disconnectButton);
+
+        if (connected) {
+            connectButton.setEnabled(false);
+            disconnectButton.setEnabled(true);
+        }else {
+            connectButton.setEnabled(true);
+            connectButton.setEnabled(false);
+        }
+
         if (joystickThread!=null) joystickThread.interrupt();
 
         if (btt!=null) {
@@ -170,8 +181,7 @@ public class MainActivity extends Activity {
             @Override
             public void onMove(int angle, int strength) {
                 Message msg = Message.obtain();
-                String coordinates = JoystickThread.parseJoystickInput(angle, strength);
-                msg.obj = coordinates;
+                msg.obj = JoystickThread.parseJoystickInput(angle, strength);
                 if (joystickThread!=null) joystickThread.interrupt();
                 if (angle != DEFAULT_ANGLE && strength != DEFAULT_STRENGTH) {
                     joystickThread = new JoystickThread(btWriteHandler, msg);
@@ -179,9 +189,6 @@ public class MainActivity extends Activity {
                 }else{
                     btWriteHandler.sendMessage(msg);
                 }
-
-                TextView tv = findViewById(R.id.statusText);
-                tv.setText(coordinates);
             }
         });
     }

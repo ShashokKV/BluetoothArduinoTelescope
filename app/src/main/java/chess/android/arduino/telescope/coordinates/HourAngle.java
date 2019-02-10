@@ -18,16 +18,12 @@ public class HourAngle  {
         timer = LocalTime.of(hour, minute, second);
     }
 
-    public LocalTime getTimer() {
-        return timer;
-    }
-
-    public void setTimer(LocalTime timer) {
-        this.timer = timer;
+    public void  plusSecond() {
+        timer = timer.plusSeconds(1);
     }
 
     public double toDegrees() {
-        return (((double)timer.getHour()*3600.0d)+((double)timer.getMinute()*60.0d)+(double)timer.getSecond())*15.0d/3600.0d;
+        return (((timer.getHour()*3600.0d)+(timer.getMinute()*60.0d)+(timer.getSecond()*1.0d))*15.0d)/3600.0d;
     }
 
     public void setToView(Activity activity) {
