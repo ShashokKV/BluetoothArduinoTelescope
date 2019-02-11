@@ -27,6 +27,9 @@ public class GpsTracker extends Service implements LocationListener {
     // Declaring a Location Manager
     protected LocationManager locationManager;
 
+    /**
+     * Stub for Service warning
+     */
     public GpsTracker(){
         mContext = null;
     }

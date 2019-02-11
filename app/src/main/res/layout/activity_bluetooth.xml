@@ -66,6 +66,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/up"
+                    android:tag="H#H#UP"
                     android:src="@android:drawable/arrow_up_float" />
 
                 <ImageButton
@@ -74,6 +75,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/up"
+                    android:tag="H#M#UP"
                     android:src="@android:drawable/arrow_up_float" />
 
                 <ImageButton
@@ -82,6 +84,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:contentDescription="@string/up"
+                    android:tag="H#S#UP"
                     android:src="@android:drawable/arrow_up_float" />
             </LinearLayout>
 
@@ -140,6 +143,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/down"
+                    android:tag="H#H#DOWN"
                     android:src="@android:drawable/arrow_down_float" />
 
                 <ImageButton
@@ -148,6 +152,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/down"
+                    android:tag="H#M#DOWN"
                     android:src="@android:drawable/arrow_down_float" />
 
                 <ImageButton
@@ -156,6 +161,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/down"
+                    android:tag="H#S#DOWN"
                     android:src="@android:drawable/arrow_down_float" />
             </LinearLayout>
         </LinearLayout>
@@ -184,6 +190,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/up"
+                    android:tag="D#D#UP"
                     android:src="@android:drawable/arrow_up_float" />
 
                 <ImageButton
@@ -192,6 +199,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/up"
+                    android:tag="D#M#UP"
                     android:src="@android:drawable/arrow_up_float" />
 
                 <ImageButton
@@ -200,6 +208,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:contentDescription="@string/up"
+                    android:tag="D#S#UP"
                     android:src="@android:drawable/arrow_up_float" />
             </LinearLayout>
 
@@ -255,6 +264,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/down"
+                    android:tag="D#D#DOWN"
                     android:src="@android:drawable/arrow_down_float" />
 
                 <ImageButton
@@ -263,6 +273,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/down"
+                    android:tag="D#M#DOWN"
                     android:src="@android:drawable/arrow_down_float" />
 
                 <ImageButton
@@ -271,6 +282,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/down"
+                    android:tag="D#S#DOWN"
                     android:src="@android:drawable/arrow_down_float" />
             </LinearLayout>
         </LinearLayout>

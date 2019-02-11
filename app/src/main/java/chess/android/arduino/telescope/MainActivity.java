@@ -13,18 +13,19 @@ import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
-import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import java.lang.ref.WeakReference;
+import java.util.Locale;
 
+import chess.android.arduino.telescope.coordinates.Coordinate;
 import chess.android.arduino.telescope.coordinates.Declination;
 import chess.android.arduino.telescope.coordinates.EquatorialCoordinates;
 import chess.android.arduino.telescope.coordinates.HourAngle;
-import chess.android.arduino.telescope.filters.InputFilterMinMax;
+import chess.android.arduino.telescope.filters.MinMaxInputFilter;
 import chess.android.arduino.telescope.threads.BluetoothThread;
 import chess.android.arduino.telescope.threads.GotoThread;
 import chess.android.arduino.telescope.threads.JoystickThread;
@@ -67,7 +68,7 @@ public class MainActivity extends Activity {
 
         // Initialize the Bluetooth thread, passing in a MAC address
         // and a Handler that will receive incoming messages
-        if (btt==null) btt = new BluetoothThread(address, new BTHandler(this));
+        if (btt == null) btt = new BluetoothThread(address, new BTHandler(this));
 
         // Get the handler that is used to send messages
         btWriteHandler = btt.getWriteHandler();
@@ -84,7 +85,7 @@ public class MainActivity extends Activity {
     public void disconnectButtonPressed(View v) {
         Log.v(TAG, "Disconnect button pressed.");
 
-        if(btt != null) {
+        if (btt != null) {
             btt.interrupt();
             btt = null;
         }
@@ -97,17 +98,17 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         try {
-            if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ) {
+            if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, 101);
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bluetooth);
 
-        if (savedInstanceState!=null) {
+        if (savedInstanceState != null) {
             connected = savedInstanceState.getBoolean(CONNECTED_STATE);
             gotoOn = savedInstanceState.getBoolean(GOTO_STATE);
         }
@@ -118,118 +119,74 @@ public class MainActivity extends Activity {
         if (connected) {
             connectButton.setEnabled(false);
             disconnectButton.setEnabled(true);
-        }else {
+        } else {
             connectButton.setEnabled(true);
-            connectButton.setEnabled(false);
+            disconnectButton.setEnabled(false);
         }
 
-        if (joystickThread!=null) joystickThread.interrupt();
+        if (joystickThread != null) joystickThread.interrupt();
 
-        if (btt!=null) {
+        if (btt != null) {
             btWriteHandler = btt.getWriteHandler();
             btt.setReadHandler(new BTHandler(this));
         }
 
-        if (gotoThread!=null) {
+        if (gotoThread != null) {
             gotoHandler = gotoThread.getWriteHandler();
             gotoThread.setActivityHandler(new GotoHandler(this));
             gotoThread.setBluetoothHandler(btt.getWriteHandler());
         }
 
-        InputFilterMinMax secMinInputFilter = new InputFilterMinMax(0, 59);
-        EditText editText = findViewById(R.id.hAngHour);
-        editText.addTextChangedListener(new EditTextWatcher(editText));
-        editText.setFilters(new InputFilter[]{new InputFilterMinMax(0, 23)});
-        editText = findViewById(R.id.hAngMinute);
-        editText.addTextChangedListener(new EditTextWatcher(editText));
-        editText.setFilters(new InputFilter[]{secMinInputFilter});
-        editText = findViewById(R.id.hAngSecond);
-        editText.addTextChangedListener(new EditTextWatcher(editText));
-        editText.setFilters(new InputFilter[]{secMinInputFilter});
-        editText = findViewById(R.id.declDegree);
-        editText.addTextChangedListener(new EditTextWatcher(editText));
-        editText.setFilters(new InputFilter[]{new InputFilterMinMax(-89, 89)});
-        editText = findViewById(R.id.declMinute);
-        editText.addTextChangedListener(new EditTextWatcher(editText));
-        editText.setFilters(new InputFilter[]{secMinInputFilter});
-        editText = findViewById(R.id.declSecond);
-        editText.addTextChangedListener(new EditTextWatcher(editText));
-        editText.setFilters(new InputFilter[]{secMinInputFilter});
+        initCoordinateFields();
 
         ToggleButton gotoToggle = findViewById(R.id.gotoButton);
         gotoToggle.setEnabled(connected);
         gotoToggle.setChecked(gotoOn);
-        gotoToggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (joystickThread!=null) joystickThread.interrupt();
-                JoystickView joystick = findViewById(R.id.joystickView);
-                if (isChecked) {
-                    beginTrack();
-                    joystick.setEnabled(false);
-                }else{
-                    if (gotoThread!=null) gotoThread.interrupt();
-                    gotoThread=null;
-                    joystick.setEnabled(true);
-                }
-                gotoOn = isChecked;
+        gotoToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (joystickThread != null) joystickThread.interrupt();
+            JoystickView joystick = findViewById(R.id.joystickView);
+            if (isChecked) {
+                beginTrack();
+                joystick.setEnabled(false);
+            } else {
+                if (gotoThread != null) gotoThread.interrupt();
+                gotoThread = null;
+                joystick.setEnabled(true);
             }
+            gotoOn = isChecked;
         });
 
         JoystickView joystick = findViewById(R.id.joystickView);
         joystick.setEnabled(connected && !gotoOn);
-        joystick.setOnMoveListener(new JoystickView.OnMoveListener() {
-            @Override
-            public void onMove(int angle, int strength) {
-                Message msg = Message.obtain();
-                msg.obj = JoystickThread.parseJoystickInput(angle, strength);
-                if (joystickThread!=null) joystickThread.interrupt();
-                if (angle != DEFAULT_ANGLE && strength != DEFAULT_STRENGTH) {
-                    joystickThread = new JoystickThread(btWriteHandler, msg);
-                    joystickThread.start();
-                }else{
-                    btWriteHandler.sendMessage(msg);
-                }
+        joystick.setOnMoveListener((angle, strength) -> {
+            Message msg = Message.obtain();
+            msg.obj = JoystickThread.parseJoystickInput(angle, strength);
+            if (joystickThread != null) joystickThread.interrupt();
+            if (angle != DEFAULT_ANGLE && strength != DEFAULT_STRENGTH) {
+                joystickThread = new JoystickThread(btWriteHandler, msg);
+                joystickThread.start();
+            } else {
+                btWriteHandler.sendMessage(msg);
             }
         });
+
     }
 
     private void beginTrack() {
-        if (gotoThread!=null) gotoThread.interrupt();
+        if (gotoThread != null) gotoThread.interrupt();
         GpsTracker gpsTracker = new GpsTracker(MainActivity.this);
         double latitude;
         if (gpsTracker.canGetLocation()) {
             latitude = gpsTracker.getLatitude();
-        }else{
+        } else {
             Toast.makeText(MainActivity.this, "Can't get current location!", Toast.LENGTH_LONG).show();
             return;
         }
-        EquatorialCoordinates equatorialCoordinates = new EquatorialCoordinates(getDeclination(), getHourAngle());
+        EquatorialCoordinates equatorialCoordinates = new EquatorialCoordinates(this);
         gotoThread = new GotoThread(latitude, equatorialCoordinates, new GotoHandler(this), btt.getWriteHandler());
         gotoThread.start();
         gotoHandler = gotoThread.getWriteHandler();
         gpsTracker.stopUsingGPS();
-    }
-
-    private HourAngle getHourAngle() {
-        int hour, minute, second;
-        TextView hourTextView = findViewById(R.id.hAngHour);
-        hour = Integer.parseInt(hourTextView.getText().toString());
-        TextView minuteTextView = findViewById(R.id.hAngMinute);
-        minute = Integer.parseInt(minuteTextView.getText().toString());
-        TextView secondsTextView = findViewById(R.id.hAngSecond);
-        second = Integer.parseInt(secondsTextView.getText().toString());
-        return new HourAngle(hour,minute,second);
-    }
-
-    private Declination getDeclination() {
-        int degree, minute, second;
-        TextView hourTextView = findViewById(R.id.declDegree);
-        degree = Integer.parseInt(hourTextView.getText().toString());
-        TextView minuteTextView = findViewById(R.id.declMinute);
-        minute = Integer.parseInt(minuteTextView.getText().toString());
-        TextView secondsTextView = findViewById(R.id.declSecond);
-        second = Integer.parseInt(secondsTextView.getText().toString());
-        return new Declination(degree,minute,second);
     }
 
     @Override
@@ -239,23 +196,137 @@ public class MainActivity extends Activity {
         super.onSaveInstanceState(savedInstanceState);
     }
 
+    public HourAngle getHourAngle() {
+        int hour, minute, second;
+        hour = Integer.parseInt(this.<TextView>findViewById(R.id.hAngHour).getText().toString());
+        minute = Integer.parseInt(this.<TextView>findViewById(R.id.hAngMinute).getText().toString());
+        second = Integer.parseInt(this.<TextView>findViewById(R.id.hAngSecond).getText().toString());
+        return new HourAngle(hour, minute, second);
+    }
+
+    public void setHourAngle(HourAngle hourAngle, String tag) {
+        setToTextView(findViewById(R.id.hAngHour), hourAngle.getHour(), tag);
+        setToTextView(findViewById(R.id.hAngMinute), hourAngle.getMinute(), tag);
+        setToTextView(findViewById(R.id.hAngSecond), hourAngle.getSecond(), tag);
+    }
+
+    public Declination getDeclination() {
+        int degree, minute, second;
+        findViewById(R.id.declDegree);
+        degree = getFromTextView(findViewById(R.id.declDegree));
+        minute = getFromTextView(findViewById(R.id.declMinute));
+        second = getFromTextView(findViewById(R.id.declSecond));
+        return new Declination(degree, minute, second);
+    }
+
+    public void setDeclination(Declination declination) {
+        setToTextView(findViewById(R.id.declDegree), declination.getDegree());
+        setToTextView(findViewById(R.id.declMinute), declination.getMinute());
+        setToTextView(findViewById(R.id.declSecond), declination.getSecond());
+    }
+
+    private int getFromTextView(TextView textView) {
+        String text = textView.getText().toString();
+        if (text.isEmpty()) return 0;
+        return Integer.parseInt(text);
+    }
+
+    private void setToTextView(TextView textView, int value) {
+        this.setToTextView(textView,value, null);
+    }
+
+    private void setToTextView(TextView textView, int value, String tag) {
+        //no tag - not changing by user
+        if (textView.getTag()==null||!textView.getTag().toString().equals("user")) {
+            String oldValue = textView.getText().toString();
+            String newValue = String.format(Locale.ENGLISH, "%d", value);
+            if (!oldValue.equals(newValue)) {
+
+                //is changing by thread
+                textView.setTag(tag);
+                textView.setText(newValue);
+                textView.setTag(null);
+            }
+        }
+    }
+
+    private void initCoordinateFields() {
+        EditText editText = findViewById(R.id.declDegree);
+        editText.addTextChangedListener(new EditTextWatcher(editText, this));
+        editText.setFilters(new InputFilter[]{new MinMaxInputFilter(-89, 89)});
+        findViewById(R.id.buttonDeclDegreeUp).setOnClickListener(
+                new ArrowButtonOnClickListener(this));
+        findViewById(R.id.buttonDeclDegreeDown).setOnClickListener(
+                new ArrowButtonOnClickListener(this)
+        );
+
+        editText = findViewById(R.id.hAngHour);
+        editText.addTextChangedListener(new EditTextWatcher(editText, this));
+        editText.setFilters(new InputFilter[]{new MinMaxInputFilter(0, 23)});
+        findViewById(R.id.buttonHourUp).setOnClickListener(
+                new ArrowButtonOnClickListener(this));
+        findViewById(R.id.buttonHourDown).setOnClickListener(
+                new ArrowButtonOnClickListener(this)
+        );
+
+        MinMaxInputFilter minSecInputFilter = new MinMaxInputFilter(0, 59);
+        editText = findViewById(R.id.hAngMinute);
+        editText.addTextChangedListener(new EditTextWatcher(editText, this));
+        editText.setFilters(new InputFilter[]{minSecInputFilter});
+        findViewById(R.id.buttonMinuteUp).setOnClickListener(
+                new ArrowButtonOnClickListener(this));
+        findViewById(R.id.buttonMinuteDown).setOnClickListener(
+                new ArrowButtonOnClickListener(this)
+        );
+
+        editText = findViewById(R.id.hAngSecond);
+        editText.addTextChangedListener(new EditTextWatcher(editText, this));
+        editText.setFilters(new InputFilter[]{minSecInputFilter});
+        findViewById(R.id.buttonSecondUp).setOnClickListener(
+                new ArrowButtonOnClickListener(this));
+        findViewById(R.id.buttonSecondDown).setOnClickListener(
+                new ArrowButtonOnClickListener(this)
+        );
+
+        editText = findViewById(R.id.declMinute);
+        editText.addTextChangedListener(new EditTextWatcher(editText, this));
+        editText.setFilters(new InputFilter[]{minSecInputFilter});
+        findViewById(R.id.buttonDeclMinuteUp).setOnClickListener(
+                new ArrowButtonOnClickListener(this));
+        findViewById(R.id.buttonDeclMinuteDown).setOnClickListener(
+                new ArrowButtonOnClickListener(this)
+        );
+
+        editText = findViewById(R.id.declSecond);
+        editText.addTextChangedListener(new EditTextWatcher(editText, this));
+        editText.setFilters(new InputFilter[]{minSecInputFilter});
+        findViewById(R.id.buttonDeclSecondUp).setOnClickListener(
+                new ArrowButtonOnClickListener(this));
+        findViewById(R.id.buttonDeclSecondDown).setOnClickListener(
+                new ArrowButtonOnClickListener(this)
+        );
+    }
+
     class EditTextWatcher implements TextWatcher {
         private EditText editText;
+        private MainActivity mainActivity;
 
-        EditTextWatcher(EditText editText) {
+        EditTextWatcher(EditText editText, MainActivity mainActivity) {
+            this.mainActivity = mainActivity;
             this.editText = editText;
         }
+
         @Override
         public void beforeTextChanged(CharSequence s, int start, int count, int after) {
         }
 
         @Override
         public void onTextChanged(CharSequence s, int start, int before, int count) {
-            if (editText.getTag()!=null && editText.getTag().toString().equals("thread")) return;
+            if (editText.getTag() != null && editText.getTag().toString().equals("thread")) return;
             editText.setTag("user");
-            if (s.toString().equals("")||s.toString().equals("-")) return;
+            if (s.toString().equals("") || s.toString().equals("-")) return;
             if (gotoOn) {
-                EquatorialCoordinates eqCoords = new EquatorialCoordinates(getDeclination(), getHourAngle());
+                EquatorialCoordinates eqCoords = new EquatorialCoordinates(mainActivity);
                 Message message = Message.obtain();
                 message.obj = eqCoords;
                 gotoHandler.sendMessage(message);
@@ -269,17 +340,17 @@ public class MainActivity extends Activity {
     }
 
     static class GotoHandler extends Handler {
-        private final WeakReference<MainActivity> bluetoothActivityWeakReference;
+        private final WeakReference<MainActivity> mainActivityWeakReference;
 
         GotoHandler(MainActivity activity) {
-            bluetoothActivityWeakReference = new WeakReference<>(activity);
+            mainActivityWeakReference = new WeakReference<>(activity);
         }
 
         @Override
         public void handleMessage(Message msg) {
             HourAngle hourAngle = (HourAngle) msg.obj;
-            MainActivity mainActivity = bluetoothActivityWeakReference.get();
-            hourAngle.setToView(mainActivity);
+            MainActivity mainActivity = mainActivityWeakReference.get();
+            mainActivity.setHourAngle(hourAngle, "thread");
         }
     }
 
@@ -305,6 +376,8 @@ public class MainActivity extends Activity {
                             "Connected.", Toast.LENGTH_SHORT).show();
                     mainActivity.findViewById(R.id.joystickView).setEnabled(true);
                     mainActivity.findViewById(R.id.gotoButton).setEnabled(true);
+                    mainActivity.findViewById(R.id.connectButton).setEnabled(false);
+                    mainActivity.findViewById(R.id.disconnectButton).setEnabled(true);
                     mainActivity.connected = true;
                     break;
                 }
@@ -313,20 +386,91 @@ public class MainActivity extends Activity {
                             "Disconnected.", Toast.LENGTH_SHORT).show();
                     mainActivity.findViewById(R.id.joystickView).setEnabled(false);
                     mainActivity.findViewById(R.id.gotoButton).setEnabled(false);
+                    mainActivity.findViewById(R.id.connectButton).setEnabled(true);
+                    mainActivity.findViewById(R.id.disconnectButton).setEnabled(false);
                     mainActivity.connected = false;
-                    if (joystickThread!=null) joystickThread.interrupt();
+                    if (joystickThread != null) joystickThread.interrupt();
                     break;
                 }
                 case "CONNECTION FAILED": {
                     Toast.makeText(mainActivity.getApplicationContext(),
                             "Connection failed!.", Toast.LENGTH_SHORT).show();
                     btt = null;
+                    mainActivity.findViewById(R.id.joystickView).setEnabled(false);
+                    mainActivity.findViewById(R.id.gotoButton).setEnabled(false);
+                    mainActivity.findViewById(R.id.connectButton).setEnabled(true);
+                    mainActivity.findViewById(R.id.disconnectButton).setEnabled(false);
                     mainActivity.connected = false;
+                    if (joystickThread != null) joystickThread.interrupt();
+                    joystickThread=null;
                     break;
                 }
                 default: {
                     break;
                 }
+            }
+        }
+    }
+
+    class ArrowButtonOnClickListener implements View.OnClickListener {
+        private MainActivity mainActivity;
+
+        ArrowButtonOnClickListener(MainActivity mainActivity) {
+            this.mainActivity = mainActivity;
+        }
+
+        @Override
+        public void onClick(View v) {
+            Coordinate coordinate;
+            String viewType;
+            String direction;
+            String valueType;
+            String[] tag = v.getTag().toString().split("#");
+            viewType = tag[0];
+            valueType = tag[1];
+            direction = tag[2];
+            if (viewType.startsWith("H")) {
+                coordinate = mainActivity.getHourAngle();
+            } else if (viewType.startsWith("D")) {
+                coordinate = mainActivity.getDeclination();
+            } else {
+                throw new IllegalArgumentException("Unknown viewTye " + viewType);
+            }
+            switch (valueType) {
+                case "H":
+                    if (direction.equals("UP")) {
+                        coordinate.plusHour();
+                    } else {
+                        coordinate.minusHour();
+                    }
+                    break;
+                case "M":
+                    if (direction.equals("UP")) {
+                        coordinate.plusMinute();
+                    } else {
+                        coordinate.minusMinute();
+                    }
+                    break;
+                case "S":
+                    if (direction.equals("UP")) {
+                        coordinate.plusSecond();
+                    } else {
+                        coordinate.minusSecond();
+                    }
+                    break;
+                case "D":
+                    if (direction.equals("UP")) {
+                        coordinate.plusDegree();
+                    } else {
+                        coordinate.minusDegree();
+                    }
+                    break;
+            }
+
+            if (coordinate instanceof HourAngle) {
+                mainActivity.setHourAngle((HourAngle) coordinate, "user");
+            } else {
+                mainActivity.setDeclination((Declination) coordinate);
             }
         }
     }

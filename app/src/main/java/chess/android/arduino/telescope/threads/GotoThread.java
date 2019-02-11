@@ -5,7 +5,7 @@ import android.os.Message;
 
 import java.lang.ref.WeakReference;
 
-import chess.android.arduino.telescope.coordinates.Declination;
+import chess.android.arduino.telescope.coordinates.Coordinate;
 import chess.android.arduino.telescope.coordinates.EquatorialCoordinates;
 import chess.android.arduino.telescope.coordinates.HourAngle;
 
@@ -63,8 +63,8 @@ public class GotoThread extends Thread {
     }
 
     private String getHorizontalCoordinates(EquatorialCoordinates equatorialCoordinates) {
-        HourAngle hourAngle = equatorialCoordinates.getHourAngle();
-        Declination declination = equatorialCoordinates.getDeclination();
+        Coordinate hourAngle = equatorialCoordinates.getHourAngle();
+        Coordinate declination = equatorialCoordinates.getDeclination();
 
         double lat = toRadians(latitude);
         double decl = toRadians(declination.toDegrees());

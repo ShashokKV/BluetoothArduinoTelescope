@@ -1,10 +1,16 @@
 package chess.android.arduino.telescope.coordinates;
 
+import chess.android.arduino.telescope.MainActivity;
+
 public class EquatorialCoordinates {
     private Declination declination;
     private HourAngle hourAngle;
 
-    public EquatorialCoordinates(Declination declination, HourAngle hourAngle) {
+    public EquatorialCoordinates(MainActivity activity) {
+        this(activity.getDeclination(), activity.getHourAngle());
+    }
+
+    private EquatorialCoordinates(Declination declination, HourAngle hourAngle) {
         this.declination = declination;
         this.hourAngle = hourAngle;
     }

@@ -1,17 +1,30 @@
 package chess.android.arduino.telescope.coordinates;
 
-public class Declination {
-    private int degree;
-    private int minute;
-    private int second;
+public class Declination extends Coordinate{
 
     public Declination(int degree, int minute, int second) {
-        this.degree = degree;
-        this.minute = minute;
-        this.second = second;
+        super(0, minute, second);
+        this.setDegree(degree);
     }
 
+    @Override
+    public void plusMinute() {
+        super.plusMinute();
+        if (this.getMinute()==0) {
+            this.plusDegree();
+        }
+    }
+
+    @Override
+    public void minusMinute() {
+        super.minusMinute();
+        if (this.getMinute()==59) {
+            this.minusDegree();
+        }
+    }
+
+    @Override
     public double toDegrees() {
-        return ((degree*3600.0d)+(minute*60.0d)+second*1.0d)/3600.0d;
+        return ((this.getDegree()*3600.0d)+(this.getMinute()*60.0d)+this.getSecond())/3600.0d;
     }
 }

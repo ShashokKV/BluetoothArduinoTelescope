@@ -3,10 +3,10 @@ package chess.android.arduino.telescope.filters;
 import android.text.InputFilter;
 import android.text.Spanned;
 
-public class InputFilterMinMax implements InputFilter {
+public class MinMaxInputFilter implements InputFilter {
     private int min, max;
 
-    public InputFilterMinMax(int min, int max) {
+    public MinMaxInputFilter(int min, int max) {
         this.min = min;
         this.max = max;
     }
