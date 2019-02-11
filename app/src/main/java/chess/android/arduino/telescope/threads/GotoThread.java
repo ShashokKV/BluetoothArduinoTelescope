@@ -4,6 +4,8 @@ import android.os.Handler;
 import android.os.Message;
 
 import java.lang.ref.WeakReference;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import chess.android.arduino.telescope.coordinates.Coordinate;
 import chess.android.arduino.telescope.coordinates.EquatorialCoordinates;
@@ -17,16 +19,19 @@ import static java.lang.Math.toDegrees;
 import static java.lang.Math.toRadians;
 
 public class GotoThread extends Thread {
+    private final static int ROUND_PLACES = 5;
     private HourAngle hourAngle;
     private EquatorialCoordinates equatorialCoordinates;
 
     private Handler activityHandler;
+    private Handler statusHandler;
     private Handler btHandler;
     private final Handler writeHandler;
     private double latitude;
 
-    public GotoThread(double latitude, EquatorialCoordinates equatorialCoordinates, Handler activityHandler, Handler btHandler) {
+    public GotoThread(double latitude, EquatorialCoordinates equatorialCoordinates, Handler activityHandler, Handler statusHandler, Handler btHandler) {
         this.activityHandler = activityHandler;
+        this.statusHandler = statusHandler;
         this.btHandler = btHandler;
         this.writeHandler = new WriteHandler(this);
         this.equatorialCoordinates = equatorialCoordinates;
@@ -48,9 +53,15 @@ public class GotoThread extends Thread {
             message.obj = hourAngle;
             activityHandler.sendMessage(message);
 
-            Message coordinatesMessage = Message.obtain();
-            coordinatesMessage.obj = getHorizontalCoordinates(equatorialCoordinates);
-            btHandler.sendMessage(coordinatesMessage);
+            String horizontalCoords =  getHorizontalCoordinates(equatorialCoordinates);
+
+            Message btCoordinatesMessage = Message.obtain();
+            btCoordinatesMessage.obj = horizontalCoords;
+            btHandler.sendMessage(btCoordinatesMessage);
+
+            Message statusCoordinateMessage = Message.obtain();
+            statusCoordinateMessage.obj = horizontalCoords;
+            statusHandler.sendMessage(statusCoordinateMessage);
 
             hourAngle.plusSecond();
             equatorialCoordinates.setHourAngle(hourAngle);
@@ -71,8 +82,8 @@ public class GotoThread extends Thread {
         double hour = toRadians(hourAngle.toDegrees());
 
         double alt = asin((sin(decl) * sin(lat)) + (cos(decl) * cos(lat) * cos(hour)));
-        double a = toDegrees(acos((sin(decl) - (sin(alt) * sin(lat))) / (cos(alt) * cos(lat))));
-        alt = toDegrees(alt);
+        double a = round(toDegrees(acos((sin(decl) - (sin(alt) * sin(lat))) / (cos(alt) * cos(lat)))));
+        alt = round(toDegrees(alt));
 
         double az;
         if (sin(hour) < 0) {
@@ -81,7 +92,7 @@ public class GotoThread extends Thread {
             az = 360 - a;
         }
 
-        return "alt=" + alt+"&az="+az;
+        return "AZ="+az+"#ALT=" + alt;
     }
 
     private void setEquatorialCoordinates(EquatorialCoordinates equatorialCoordinates) {
@@ -108,5 +119,11 @@ public class GotoThread extends Thread {
             GotoThread gotoThread = gotoThreadWeakReference.get();
             gotoThread.setEquatorialCoordinates((EquatorialCoordinates) msg.obj);
         }
+    }
+
+    private double round(double val) {
+        BigDecimal bd = new BigDecimal(Double.toString(val));
+        bd = bd.setScale(ROUND_PLACES, RoundingMode.HALF_UP);
+        return bd.doubleValue();
     }
 }

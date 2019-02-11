@@ -143,21 +143,17 @@ public class MainActivity extends Activity {
         gotoToggle.setEnabled(connected);
         gotoToggle.setChecked(gotoOn);
         gotoToggle.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (joystickThread != null) joystickThread.interrupt();
-            JoystickView joystick = findViewById(R.id.joystickView);
             if (isChecked) {
                 beginTrack();
-                joystick.setEnabled(false);
             } else {
                 if (gotoThread != null) gotoThread.interrupt();
                 gotoThread = null;
-                joystick.setEnabled(true);
             }
             gotoOn = isChecked;
         });
 
         JoystickView joystick = findViewById(R.id.joystickView);
-        joystick.setEnabled(connected && !gotoOn);
+        joystick.setEnabled(connected);
         joystick.setOnMoveListener((angle, strength) -> {
             Message msg = Message.obtain();
             msg.obj = JoystickThread.parseJoystickInput(angle, strength);
@@ -183,7 +179,7 @@ public class MainActivity extends Activity {
             return;
         }
         EquatorialCoordinates equatorialCoordinates = new EquatorialCoordinates(this);
-        gotoThread = new GotoThread(latitude, equatorialCoordinates, new GotoHandler(this), btt.getWriteHandler());
+        gotoThread = new GotoThread(latitude, equatorialCoordinates, new GotoHandler(this), new StatusHandler(this), btt.getWriteHandler());
         gotoThread.start();
         gotoHandler = gotoThread.getWriteHandler();
         gpsTracker.stopUsingGPS();
@@ -351,6 +347,20 @@ public class MainActivity extends Activity {
             HourAngle hourAngle = (HourAngle) msg.obj;
             MainActivity mainActivity = mainActivityWeakReference.get();
             mainActivity.setHourAngle(hourAngle, "thread");
+        }
+    }
+
+    static class StatusHandler extends Handler {
+        private final WeakReference<MainActivity> mainActivityWeakReference;
+
+        StatusHandler(MainActivity mainActivity) {
+            mainActivityWeakReference = new WeakReference<>(mainActivity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            MainActivity mainActivity = mainActivityWeakReference.get();
+            mainActivity.<TextView>findViewById(R.id.statusView).setText(msg.obj.toString());
         }
     }
 

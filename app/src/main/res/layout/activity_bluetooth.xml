@@ -12,6 +12,13 @@
     android:weightSum="1"
     tools:context=".MainActivity">
 
+    <TextView
+        android:id="@+id/statusView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="" />
+
     <LinearLayout
         style="?android:attr/buttonBarButtonStyle"
         android:layout_width="match_parent"
@@ -25,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="0.5"
             android:onClick="connectButtonPressed"
-            android:text="@string/connect" />
+            android:text="@string/connect"/>
 
         <Button
             android:id="@+id/disconnectButton"
@@ -64,10 +71,11 @@
                     android:id="@+id/buttonHourUp"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+
                     android:layout_weight="1"
                     android:contentDescription="@string/up"
-                    android:tag="H#H#UP"
-                    android:src="@android:drawable/arrow_up_float" />
+                    android:src="@android:drawable/arrow_up_float"
+                    android:tag="H#H#UP" />
 
                 <ImageButton
                     android:id="@+id/buttonMinuteUp"
@@ -309,9 +317,9 @@
             android:layout_height="match_parent"
             android:layout_gravity="center"
             android:layout_marginTop="64dp"
-            custom:JV_backgroundColor="#575153"
+            custom:JV_backgroundColor="#12205A"
             custom:JV_borderWidth="0dp"
-            custom:JV_buttonColor="#DC081E58" />
+            custom:JV_buttonColor="#DCCFC4C4" />
     </LinearLayout>
 
 </LinearLayout>
