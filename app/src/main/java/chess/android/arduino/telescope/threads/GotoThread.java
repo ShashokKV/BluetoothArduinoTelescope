@@ -71,6 +71,9 @@ public class GotoThread extends Thread {
                 break;
             }
         }
+        Message btCoordinatesMessage = Message.obtain();
+        btCoordinatesMessage.obj = "STOP#";
+        btHandler.sendMessage(btCoordinatesMessage);
     }
 
     private String getHorizontalCoordinates(EquatorialCoordinates equatorialCoordinates) {
@@ -92,7 +95,7 @@ public class GotoThread extends Thread {
             az = 360 - a;
         }
 
-        return "AZ="+az+"#ALT=" + alt;
+        return "Z"+az+"#A" + alt;
     }
 
     private void setEquatorialCoordinates(EquatorialCoordinates equatorialCoordinates) {

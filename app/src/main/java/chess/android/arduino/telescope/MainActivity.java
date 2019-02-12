@@ -28,7 +28,6 @@ import chess.android.arduino.telescope.coordinates.HourAngle;
 import chess.android.arduino.telescope.filters.MinMaxInputFilter;
 import chess.android.arduino.telescope.threads.BluetoothThread;
 import chess.android.arduino.telescope.threads.GotoThread;
-import chess.android.arduino.telescope.threads.JoystickThread;
 import io.github.controlwear.virtual.joystick.android.JoystickView;
 
 /**
@@ -36,8 +35,6 @@ import io.github.controlwear.virtual.joystick.android.JoystickView;
  * send and receive messages using Handlers, and update the UI.
  */
 public class MainActivity extends Activity {
-
-    public static final int DEFAULT_STRENGTH = 0;
     // Tag for logging
     private static final String TAG = "MainActivity";
     // MAC address of remote Bluetooth device
@@ -46,14 +43,14 @@ public class MainActivity extends Activity {
 
     private static final String CONNECTED_STATE = "connectedState";
     private static final String GOTO_STATE = "gotoState";
-    public static final int DEFAULT_ANGLE = 0;
+    private static final int X_MAX = 100;
+    private static final int Y_MAX = 100;
     private boolean connected = false;
     private boolean gotoOn = false;
 
     // The thread that does all the work
     static BluetoothThread btt;
     static GotoThread gotoThread;
-    static Thread joystickThread;
 
     // Handler for writing messages to the Bluetooth connection
     Handler btWriteHandler;
@@ -124,8 +121,6 @@ public class MainActivity extends Activity {
             disconnectButton.setEnabled(false);
         }
 
-        if (joystickThread != null) joystickThread.interrupt();
-
         if (btt != null) {
             btWriteHandler = btt.getWriteHandler();
             btt.setReadHandler(new BTHandler(this));
@@ -156,18 +151,19 @@ public class MainActivity extends Activity {
         joystick.setEnabled(connected);
         joystick.setOnMoveListener((angle, strength) -> {
             Message msg = Message.obtain();
-            msg.obj = JoystickThread.parseJoystickInput(angle, strength);
-            if (joystickThread != null) joystickThread.interrupt();
-            if (angle != DEFAULT_ANGLE && strength != DEFAULT_STRENGTH) {
-                joystickThread = new JoystickThread(btWriteHandler, msg);
-                joystickThread.start();
-            } else {
-                btWriteHandler.sendMessage(msg);
-            }
+            msg.obj = parseJoystickInput(angle, strength);
+            btWriteHandler.sendMessage(msg);
         });
 
     }
 
+    public String parseJoystickInput(int angle, int strength) {
+        int x, y;
+        x = Double.valueOf((strength * X_MAX * Math.cos(Math.toRadians(angle))) / 100).intValue();
+        y = Double.valueOf((strength * Y_MAX * Math.sin(Math.toRadians(angle))) / 100).intValue();
+
+        return "X" + x + "#" + "Y" + y;
+    }
     private void beginTrack() {
         if (gotoThread != null) gotoThread.interrupt();
         GpsTracker gpsTracker = new GpsTracker(MainActivity.this);
@@ -399,7 +395,6 @@ public class MainActivity extends Activity {
                     mainActivity.findViewById(R.id.connectButton).setEnabled(true);
                     mainActivity.findViewById(R.id.disconnectButton).setEnabled(false);
                     mainActivity.connected = false;
-                    if (joystickThread != null) joystickThread.interrupt();
                     break;
                 }
                 case "CONNECTION FAILED": {
@@ -411,8 +406,6 @@ public class MainActivity extends Activity {
                     mainActivity.findViewById(R.id.connectButton).setEnabled(true);
                     mainActivity.findViewById(R.id.disconnectButton).setEnabled(false);
                     mainActivity.connected = false;
-                    if (joystickThread != null) joystickThread.interrupt();
-                    joystickThread=null;
                     break;
                 }
                 default: {
