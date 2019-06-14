@@ -103,7 +103,7 @@ public class MainActivity extends Activity {
         }
 
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_bluetooth);
+        setContentView(R.layout.main_activity);
 
         if (savedInstanceState != null) {
             connected = savedInstanceState.getBoolean(CONNECTED_STATE);

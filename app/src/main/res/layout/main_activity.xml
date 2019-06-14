@@ -313,13 +313,10 @@
 
         <io.github.controlwear.virtual.joystick.android.JoystickView
             android:id="@+id/joystickView"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:layout_marginTop="64dp"
-            custom:JV_backgroundColor="#12205A"
-            custom:JV_borderWidth="0dp"
+            android:layout_gravity="center_horizontal"
+            custom:JV_backgroundColor="#132255"
             custom:JV_buttonColor="#DCCFC4C4" />
     </LinearLayout>
-
 </LinearLayout>
