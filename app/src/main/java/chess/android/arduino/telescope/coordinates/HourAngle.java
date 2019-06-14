@@ -1,6 +1,8 @@
 package chess.android.arduino.telescope.coordinates;
 
 public class HourAngle  extends Coordinate{
+
+
     public HourAngle(int hour, int minute, int second) {
         super(hour, minute, second);
     }

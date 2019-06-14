@@ -3,38 +3,14 @@ package chess.android.arduino.telescope.threads;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-
-import java.io.InputStream;
-import java.io.OutputStream;
-
 import android.os.Handler;
 import android.os.Message;
-
 import android.util.Log;
 
+import java.io.OutputStream;
 import java.lang.ref.WeakReference;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-/**
- * A thread that connects to a remote device over Bluetooth, and reads/writes data
- * using message Handlers. A delimiter character is used to parse messages from a stream,
- * and must be implemented on the other side of the connection as well. If the connection
- * fails, the thread exits.
- *
- * Usage:
- *
- *     BluetoothThread t = BluetoothThread("00:06:66:66:33:89", new Handler() {
- *         Override
- *         public void handleMessage(Message message) {
- *             String msg = (String) message.obj;
- *             do_something(msg);
- *         }
- *     });
- *
- *     Handler btWriteHandler = t.getWriteHandler();
- *     t.start();
- */
 public class BluetoothThread extends Thread {
 
     // Tag for logging
@@ -54,14 +30,10 @@ public class BluetoothThread extends Thread {
 
     // Streams that we read from and write to
     private OutputStream outStream;
-    private InputStream inStream;
 
     // Handlers used to pass data between threads
     private Handler readHandler;
     private final Handler writeHandler;
-
-    // Buffer used to parse messages
-    private StringBuilder stringBuffer;
 
     /**
      * Constructor, takes in the MAC address of the remote Bluetooth device
@@ -95,9 +67,6 @@ public class BluetoothThread extends Thread {
 
         Log.i(TAG, "Attempting connection to " + address + "...");
 
-        //TODO CONNECT
-        if(true) return;
-
         // Get this device's Bluetooth adapter
         BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         if ((adapter == null) || (!adapter.isEnabled())){
@@ -118,7 +87,6 @@ public class BluetoothThread extends Thread {
 
         // Get input and output streams from the socket
         outStream = socket.getOutputStream();
-        inStream = socket.getInputStream();
 
         Log.i(TAG, "Connected successfully to " + address + ".");
     }
@@ -128,12 +96,8 @@ public class BluetoothThread extends Thread {
      */
     private void disconnect() {
 
-        if (inStream != null) {
-            try {inStream.close();} catch (Exception e) { e.printStackTrace(); }
-        }
-
         if (outStream != null) {
-            try {outStream.close();} catch (Exception e) { e.printStackTrace(); }
+            try {outStream.flush();outStream.close();} catch (Exception e) { e.printStackTrace(); }
         }
 
         if (socket != null) {
@@ -142,41 +106,10 @@ public class BluetoothThread extends Thread {
     }
 
     /**
-     * Return data read from the socket, or a blank string.
-     */
-    private String read() {
-
-        String s = "";
-
-        try {
-            // Check if there are bytes available
-            if (inStream.available() > 0) {
-
-                // Read bytes into a buffer
-                byte[] inBuffer = new byte[1024];
-                int bytesRead = inStream.read(inBuffer);
-
-                // Convert read bytes into a string
-                s = new String(inBuffer, StandardCharsets.US_ASCII);
-                s = s.substring(0, bytesRead);
-            }
-
-        } catch (Exception e) {
-            Log.e(TAG, "Read failed!", e);
-        }
-
-        return s;
-    }
-
-    /**
      * Write data to the socket.
      */
     private void write(String s) {
         try {
-            //TODO WRITE
-            Log.i(TAG, "[SENT] " + s);
-            if (true) return;
-
             // Add the delimiter
             s += DELIMITER;
 
@@ -201,37 +134,9 @@ public class BluetoothThread extends Thread {
     }
 
     /**
-     * Send complete messages from the rx_buffer to the read handler.
-     */
-    private void parseMessages() {
-
-        String rx_buffer = stringBuffer.toString();
-
-        // Find the first delimiter in the buffer
-        int inx = rx_buffer.indexOf(DELIMITER);
-
-        // If there is none, exit
-        if (inx == -1)
-            return;
-
-        // Get the complete message
-        String s = rx_buffer.substring(0, inx);
-
-        // Remove the message from the buffer
-        rx_buffer = rx_buffer.substring(inx + 1);
-
-        // Send to read handler
-        sendToReadHandler(s);
-
-        // Look for more complete messages
-        parseMessages();
-    }
-
-    /**
      * Entry point when thread.start() is called.
      */
     public void run() {
-
         // Attempt to connect and exit the thread if it failed
         try {
             connect();
@@ -243,37 +148,14 @@ public class BluetoothThread extends Thread {
             return;
         }
 
-        // Loop continuously, reading data, until thread.interrupt() is called
-        stringBuffer = new StringBuilder();
-        //TODO READ
-        if (true) {
-            while (!this.isInterrupted()) {
-                Log.i(TAG, "Thread is working!");
-                try {
-                    sleep(10000);
-                } catch (InterruptedException e) {
-                    Log.i(TAG, "Thread stopping!");
-                    break;
-                }
-            }
-        }
-/*
         while (!this.isInterrupted()) {
             // Make sure things haven't gone wrong
-            if ((inStream == null) || (outStream == null)) {
+            if (outStream == null) {
                 Log.e(TAG, "Lost bluetooth connection!");
                 break;
             }
-
-            // Read data and add it to the buffer
-            String s = read();
-            if (s.length() > 0)
-                stringBuffer.append(s);
-
-            // Look for complete messages
-            parseMessages();
         }
-*/
+
         // If thread is interrupted, close connections
         disconnect();
         sendToReadHandler("DISCONNECTED");
