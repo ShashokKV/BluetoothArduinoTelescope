@@ -18,9 +18,14 @@ double azNew;
 double altOld;
 double azOld;
 long positions[2];
+#define dirPinAlt 2
+#define stepPinAlt 3
+#define dirPinAz 4
+#define stepPinAz 5
+#define motorInterfaceType 1
 
-AccelStepper stepperAlt(AccelStepper::FULL4WIRE, 2, 3, 4, 5);
-AccelStepper stepperAz(AccelStepper::FULL4WIRE, 6, 7, 8, 9);
+AccelStepper stepperAlt = AccelStepper(motorInterfaceType, stepPinAlt, dirPinAlt);
+AccelStepper stepperAz = AccelStepper(motorInterfaceType, stepPinAz, dirPinAz);
 void setup() {
   Serial.begin(9600);
   //bluetooth.begin(9600);
@@ -77,10 +82,10 @@ void loop() {
     char c = Serial.read();
     if (c == '#') {
       if (azRead) {
-        azNew = val.toDouble();       
+        azNew = val.toDouble();
         azRead = false;
       } else if (altRead) {
-        altNew = val.toDouble();        
+        altNew = val.toDouble();
         if (altOld != 0 && azOld != 0  &&
             (altNew != altOld || azNew != azOld)) {
           moveSteppers(azNew, altNew);
@@ -101,27 +106,27 @@ void loop() {
           altOld = altOld + (yVal * SECONDS_PER_STEP);
           y = false;
         }
-      }      
+      }
       val = "";
-    } else if (c == 'A') {     
+    } else if (c == 'A') {
       altRead = true;
       azRead = false;
       x = false;
       y = false;
       val = "";
-    } else if (c == 'Z') {      
+    } else if (c == 'Z') {
       altRead = false;
       azRead = true;
       x = false;
       y = false;
       val = "";
-    } else if (c == 'X') {      
+    } else if (c == 'X') {
       x = true;
       y = false;
       altRead = false;
       azRead = false;
       val = "";
-    } else if (c == 'Y') {      
+    } else if (c == 'Y') {
       x = false;
       y = true;
       altRead = false;
