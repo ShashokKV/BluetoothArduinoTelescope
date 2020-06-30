@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/BluetoothArduinoTelescope.iml" filepath="$PROJECT_DIR$/BluetoothArduinoTelescope.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/BluetoothArduinoTelescope.iml" filepath="$PROJECT_DIR$/BluetoothArduinoTelescope.iml" group="BluetoothArduinoTelescope" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="BluetoothArduinoTelescope/app" />
     </modules>
   </component>
 </project>

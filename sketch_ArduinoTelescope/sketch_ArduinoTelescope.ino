@@ -2,7 +2,7 @@
 #include <MultiStepper.h>
 //#include <NeoSWSerial.h>
 
-double SECONDS_PER_STEP = 0.009375;
+double SECONDS_PER_STEP = 0.005921;
 double MAX_SPEED = 500;
 double MAX_ALT = 90;
 double MIN_ALT = 0;
@@ -13,6 +13,7 @@ boolean altRead;
 boolean azRead;
 boolean x;
 boolean y;
+boolean en;
 double altNew;
 double azNew;
 double altOld;
@@ -30,26 +31,36 @@ void setup() {
   Serial.begin(9600);
   //bluetooth.begin(9600);
   stepperAz.setMaxSpeed(MAX_SPEED);
+  stepperAz.setEnablePin(6);
   stepperAlt.setMaxSpeed(MAX_SPEED);
+  stepperAlt.setEnablePin(7);
+  altOld = 0;
+  azOld = 0;
+}
+
+double getPositionInSteps(double newVal) {
+  return  newVal / SECONDS_PER_STEP;
 }
 
 double getDeltaInSteps(double oldVal, double newVal) {
-  return ((oldVal - newVal) / SECONDS_PER_STEP);
+  return abs((oldVal - newVal) / SECONDS_PER_STEP);
 }
 
 void moveSteppers(double azNew, double altNew) {
+  double azPosition = getPositionInSteps(azNew);
   double azDelta = getDeltaInSteps(azOld, azNew);
+  Serial.println("azPosition=" + String(azPosition, 5));
   Serial.println("azDelta=" + String(azDelta, 5));
-  if (azDelta >= 1 || azDelta <= -1) {
-    stepperAlt.setSpeed(abs(azDelta));
-    positions[0] = round(azDelta);
-  }
+  if (azDelta > 0) stepperAlt.setSpeed(azDelta);
+  positions[0] = round(azPosition);
+
+  double altPosition = getPositionInSteps(altNew);
   double altDelta = getDeltaInSteps(altOld, altNew);
+  Serial.println("altPosition=" + String(altPosition, 5));
   Serial.println("altDelta=" + String(altDelta, 5));
-  if (altDelta >= 1 || altDelta <= -1) {
-    stepperAlt.setSpeed(abs(altDelta));
-    positions[1] = round(altDelta);
-  }
+
+  if (altDelta > 0) stepperAlt.setSpeed(altDelta);
+  positions[1] = round(altPosition);
 
   MultiStepper steppers;
   steppers.addStepper(stepperAz);
@@ -58,22 +69,35 @@ void moveSteppers(double azNew, double altNew) {
   steppers.moveTo(positions);
   unsigned long mls = millis();
   steppers.runSpeedToPosition();
-  Serial.println(String(millis() - mls));
+
+  Serial.println("Current position: " + String(stepperAz.currentPosition()) + ", " + String(stepperAlt.currentPosition()));
+  Serial.println("Mls "+String(millis() - mls));
 }
 
-void moveSteeperOnSpeed(AccelStepper stepper, int force) {
+void updateCurrentPosition(double azNew, double altNew) {
+  double azPosition = getPositionInSteps(azNew);
+  double altPosition = getPositionInSteps(altNew);
+
+  Serial.println("updating position to " + String(azPosition) + ", " + String(altPosition));
+
+  stepperAz.setCurrentPosition(round(azPosition));
+  stepperAlt.setCurrentPosition(round(altPosition));
+
+  Serial.println("Current position: " + String(stepperAz.currentPosition()) + ", " + String(stepperAlt.currentPosition()));
+}
+/*
+  void moveSteeperOnSpeed(AccelStepper stepper, int force) {
   Serial.println("pos=" + String(force) + ", speed=" + String(abs(force)));
-  stepper.moveTo(round(force));
+  stepper.move(round(force));
   stepper.setSpeed(abs(force));
   unsigned long mls = millis();
-  stepper.run();
+  stepper.runSpeedToPosition();
   Serial.println(String(millis() - mls));
-}
-
-boolean checkAlt(double value) {
-  if (!altOld) return true;
-  if (altOld + value > MAX_ALT) return false;
-  if (altOld + value < MIN_ALT) return false;
+  }
+*/
+boolean checkAlt(double altNew) {
+  if (altNew > MAX_ALT) return false;
+  if (altNew < MIN_ALT) return false;
   return true;
 }
 
@@ -81,13 +105,20 @@ void loop() {
   if (Serial.available()) {
     char c = Serial.read();
     if (c == '#') {
+      Serial.println("#");
+      Serial.println("val=" + val);
       if (azRead) {
         azNew = val.toDouble();
         azRead = false;
       } else if (altRead) {
         altNew = val.toDouble();
-        if (altOld != 0 && azOld != 0  &&
-            (altNew != altOld || azNew != azOld)) {
+        Serial.println("altNew=" + String(altNew));
+        Serial.println("altOld=" + String(altOld));
+        Serial.println("azNew=" + String(azNew));
+        Serial.println("azOld=" + String(azOld));
+        if (altOld == 0 && azOld == 0) {
+          updateCurrentPosition(azNew, altNew);
+        } else {
           moveSteppers(azNew, altNew);
         }
         altOld = altNew;
@@ -95,50 +126,74 @@ void loop() {
         altRead = false;
         azRead = false;
       } else if (x) {
-        int xVal = val.toInt();
-        moveSteeperOnSpeed(stepperAz, xVal);
-        azOld = azOld + (xVal * SECONDS_PER_STEP);
+        azNew = azOld + (val.toDouble() * SECONDS_PER_STEP);
         x = false;
       } else if (y) {
-        int yVal = val.toInt();
-        if (checkAlt(yVal)) {
-          moveSteeperOnSpeed(stepperAlt, yVal);
-          altOld = altOld + (yVal * SECONDS_PER_STEP);
-          y = false;
+        altNew = altOld + (val.toDouble() * SECONDS_PER_STEP);
+        if (checkAlt(altNew)) {
+          moveSteppers(azNew, altNew);
+          altOld = altNew;
+          azOld = azNew;
         }
+        y = false;
+      } else if (en) {
+        if (val == "1") {
+          stepperAz.disableOutputs();
+          stepperAlt.disableOutputs();
+        } else {
+          stepperAz.enableOutputs();
+          stepperAlt.enableOutputs();
+        }
+        en = false;
       }
       val = "";
     } else if (c == 'A') {
+      Serial.println("A");
       altRead = true;
       azRead = false;
       x = false;
       y = false;
+      en = false;
       val = "";
     } else if (c == 'Z') {
+      Serial.println("Z");
       altRead = false;
       azRead = true;
       x = false;
       y = false;
+      en = false;
       val = "";
     } else if (c == 'X') {
+      Serial.println("X");
       x = true;
       y = false;
       altRead = false;
       azRead = false;
+      en = false;
       val = "";
     } else if (c == 'Y') {
+      Serial.println("Y");
       x = false;
       y = true;
       altRead = false;
       azRead = false;
+      en = false;
       val = "";
-    } else if (val == "STOP") {
+    } else if (c == 'S') {
       azOld = 0;
       altOld = 0;
       x = false;
       y = false;
       altRead = false;
       azRead = false;
+      en = false;
+      val = "";
+    } else if (c == 'E') {
+      x = false;
+      y = false;
+      altRead = false;
+      azRead = false;
+      en = true;
       val = "";
     } else {
       val += c;

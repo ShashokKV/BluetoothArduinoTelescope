@@ -12,13 +12,6 @@
     android:weightSum="1"
     tools:context=".MainActivity">
 
-    <TextView
-        android:id="@+id/statusView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="" />
-
     <LinearLayout
         style="?android:attr/buttonBarButtonStyle"
         android:layout_width="match_parent"
@@ -46,7 +39,7 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical">
 
         <LinearLayout
@@ -176,7 +169,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical">
 
             <TextView
@@ -188,7 +181,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:weightSum="3">
 
@@ -213,7 +206,7 @@
                 <ImageButton
                     android:id="@+id/buttonDeclSecondUp"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:contentDescription="@string/up"
                     android:tag="D#S#UP"
@@ -222,7 +215,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:weightSum="9">
 
@@ -262,7 +255,7 @@
 
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:weightSum="3">
 
@@ -297,26 +290,46 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="horizontal">
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:weightSum="1">
+
+            <ToggleButton
+                android:id="@+id/motorButton"
+                style="@style/AppTheme"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="0.1"
+                android:checked="false"
+                android:textOff="@string/motor_off"
+                android:textOn="@string/motor_on" />
 
             <ToggleButton
                 android:id="@+id/gotoButton"
                 style="@style/AppTheme"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="0.1"
                 android:checked="false"
                 android:text="@string/setGoto"
                 android:textOff="@string/textGoto"
                 android:textOn="@string/textGoto" />
-        </LinearLayout>
+            <Button
+                android:id="@+id/calibrateButton"
+                style="@style/AppTheme"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="0.1"
+                android:text="@string/calibrate"/>
 
-        <io.github.controlwear.virtual.joystick.android.JoystickView
-            android:id="@+id/joystickView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center_horizontal"
-            custom:JV_backgroundColor="#132255"
-            custom:JV_buttonColor="#DCCFC4C4" />
+            <io.github.controlwear.virtual.joystick.android.JoystickView
+                android:id="@+id/joystickView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="0.7"
+                android:layout_gravity="center_horizontal"
+                custom:JV_backgroundColor="#132255"
+                custom:JV_buttonColor="#DCCFC4C4" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>
