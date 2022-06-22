@@ -22,4 +22,5 @@
     <string name="calibrate">CALIBRATE</string>
     <string name="motor_on">MOTOR ON</string>
     <string name="motor_off">MOTOR OFF</string>
+    <string name="update_position">UPDATE POSITION</string>
 </resources>

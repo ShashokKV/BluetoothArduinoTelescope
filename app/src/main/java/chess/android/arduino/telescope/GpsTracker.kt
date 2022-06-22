@@ -14,6 +14,8 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ActivityCompat
 
+
+
 class GpsTracker(private val mContext: Context) : Service(), LocationListener {
 
     // flag for GPS status

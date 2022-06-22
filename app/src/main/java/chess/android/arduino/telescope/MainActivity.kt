@@ -106,6 +106,7 @@ class MainActivity : Activity() {
             gotoThread!!.setActivityHandler(GotoHandler(this))
             gotoThread!!.setBluetoothHandler(btt!!.writeHandler)
         }
+
         initCoordinateFields()
         val motorButton = findViewById<ToggleButton>(R.id.motorButton)
         motorButton.isEnabled = connected
@@ -118,6 +119,7 @@ class MainActivity : Activity() {
             }
             btWriteHandler!!.sendMessage(msg)
         }
+
         val gotoToggle = findViewById<ToggleButton>(R.id.gotoButton)
         gotoToggle.isEnabled = connected
         gotoToggle.isChecked = gotoOn
@@ -130,13 +132,37 @@ class MainActivity : Activity() {
             }
             gotoOn = isChecked
         }
+
         val calibrateButton = findViewById<Button>(R.id.calibrateButton)
         calibrateButton.isEnabled = connected
         calibrateButton.setOnClickListener {
             val msg = Message.obtain()
             msg.obj = "M1"
             btWriteHandler!!.sendMessage(msg)
+            motorButton.isChecked = true
         }
+
+        val updatePositionButton = findViewById<Button>(R.id.updatePosButton)
+        updatePositionButton.isEnabled = connected
+        updatePositionButton.setOnClickListener {
+            var msg = Message.obtain()
+            msg.obj = "T"
+            btWriteHandler!!.sendMessage(msg)
+
+            val gpsTracker = GpsTracker(this@MainActivity)
+            if (gpsTracker.canGetLocation()) {
+                val latitude = gpsTracker.latitude
+                val equatorialCoordinates = EquatorialCoordinates(this)
+                msg = Message.obtain()
+                msg.obj = equatorialCoordinates.getHorizontalCoordinates(latitude)
+                btWriteHandler!!.sendMessage(msg)
+                gpsTracker.stopUsingGPS()
+                Toast.makeText(this@MainActivity, "Position updated", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this@MainActivity, "Can't get current location!", Toast.LENGTH_LONG).show()
+            }
+        }
+
         val joystick: JoystickView = findViewById(R.id.joystickView)
         joystick.isEnabled = connected
         joystick.setOnMoveListener { angle: Int, strength: Int ->
@@ -155,8 +181,7 @@ class MainActivity : Activity() {
     private fun beginTrack() {
         if (gotoThread != null) gotoThread!!.interrupt()
         val gpsTracker = GpsTracker(this@MainActivity)
-        val latitude: Double
-        latitude = if (gpsTracker.canGetLocation()) {
+        val latitude: Double = if (gpsTracker.canGetLocation()) {
             gpsTracker.latitude
         } else {
             Toast.makeText(this@MainActivity, "Can't get current location!", Toast.LENGTH_LONG).show()
@@ -321,6 +346,7 @@ class MainActivity : Activity() {
                     mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = true
                     mainActivity.findViewById<View>(R.id.motorButton).isEnabled = true
                     mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = true
+                    mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = true
                     mainActivity.findViewById<View>(R.id.connectButton).isEnabled = false
                     mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = true
                     mainActivity.connected = true
@@ -332,6 +358,7 @@ class MainActivity : Activity() {
                     mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = false
                     mainActivity.findViewById<View>(R.id.motorButton).isEnabled = false
                     mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = false
+                    mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = false
                     mainActivity.findViewById<View>(R.id.connectButton).isEnabled = true
                     mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = false
                     mainActivity.connected = false
@@ -344,6 +371,7 @@ class MainActivity : Activity() {
                     mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = false
                     mainActivity.findViewById<View>(R.id.motorButton).isEnabled = false
                     mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = false
+                    mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = false
                     mainActivity.findViewById<View>(R.id.connectButton).isEnabled = true
                     mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = false
                     mainActivity.connected = false

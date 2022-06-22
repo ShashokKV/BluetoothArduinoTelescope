@@ -14,7 +14,8 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
-        <service android:name=".GpsTracker"/>
+        <service android:name=".GpsTracker"
+            tools:ignore="Instantiatable" />
 
         <activity
             android:name=".MainActivity"
