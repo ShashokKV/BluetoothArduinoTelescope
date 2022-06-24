@@ -3,6 +3,7 @@ package chess.android.arduino.telescope
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
@@ -15,7 +16,6 @@ import android.view.View
 import android.widget.*
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import chess.android.arduino.telescope.coordinates.Coordinate
 import chess.android.arduino.telescope.coordinates.Declination
 import chess.android.arduino.telescope.coordinates.EquatorialCoordinates
 import chess.android.arduino.telescope.coordinates.HourAngle
@@ -23,17 +23,19 @@ import chess.android.arduino.telescope.filters.MinMaxInputFilter
 import chess.android.arduino.telescope.threads.BluetoothThread
 import chess.android.arduino.telescope.threads.GotoThread
 import io.github.controlwear.virtual.joystick.android.JoystickView
-import java.lang.ref.WeakReference
 import java.util.*
+import java.util.regex.Matcher
+import java.util.regex.Pattern
 import kotlin.math.cos
 import kotlin.math.sin
+
 
 /**
  * Simple UI demonstrating how to connect to a Bluetooth device,
  * send and receive messages using Handlers, and update the UI.
  */
 class MainActivity : Activity() {
-    private var connected = false
+    var connected = false
     private var gotoOn = false
 
     // Handler for writing messages to the Bluetooth connection
@@ -76,8 +78,16 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         try {
-            if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 101)
+            if (ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                    101
+                )
             }
         } catch (e: Exception) {
             Toast.makeText(this, e.message, Toast.LENGTH_LONG).show()
@@ -97,6 +107,12 @@ class MainActivity : Activity() {
             connectButton.isEnabled = true
             disconnectButton.isEnabled = false
         }
+
+        val enterCoordinatesButton = findViewById<View>(R.id.enterCoordinatesButton)
+        enterCoordinatesButton.setOnClickListener {
+            enterCoordinatesDialog()
+        }
+
         if (btt != null) {
             btWriteHandler = btt!!.writeHandler
             btt!!.setReadHandler(BTHandler(this))
@@ -114,7 +130,7 @@ class MainActivity : Activity() {
             val msg = Message.obtain()
             if (isChecked) {
                 msg.obj = "E1"
-            }else{
+            } else {
                 msg.obj = "E0"
             }
             btWriteHandler!!.sendMessage(msg)
@@ -159,7 +175,8 @@ class MainActivity : Activity() {
                 gpsTracker.stopUsingGPS()
                 Toast.makeText(this@MainActivity, "Position updated", Toast.LENGTH_LONG).show()
             } else {
-                Toast.makeText(this@MainActivity, "Can't get current location!", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "Can't get current location!", Toast.LENGTH_LONG)
+                    .show()
             }
         }
 
@@ -184,14 +201,72 @@ class MainActivity : Activity() {
         val latitude: Double = if (gpsTracker.canGetLocation()) {
             gpsTracker.latitude
         } else {
-            Toast.makeText(this@MainActivity, "Can't get current location!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this@MainActivity, "Can't get current location!", Toast.LENGTH_LONG)
+                .show()
             return
         }
         val equatorialCoordinates = EquatorialCoordinates(this)
-        gotoThread = GotoThread(latitude, equatorialCoordinates, GotoHandler(this), btt!!.writeHandler)
+        gotoThread =
+            GotoThread(latitude, equatorialCoordinates, GotoHandler(this), btt!!.writeHandler)
         gotoThread!!.start()
         gotoHandler = gotoThread!!.writeHandler
         gpsTracker.stopUsingGPS()
+    }
+
+    private fun enterCoordinatesDialog() {
+        val alertDialog: AlertDialog.Builder = AlertDialog.Builder(this@MainActivity)
+        alertDialog.setMessage("Enter coordinates")
+
+        val input = EditText(this@MainActivity)
+        val lp = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.MATCH_PARENT
+        )
+        input.layoutParams = lp
+        alertDialog.setView(input)
+
+        alertDialog.setPositiveButton("YES") { _, _ ->
+            val coordinates = input.text.toString()
+            parseCoordinates(coordinates)
+        }
+
+        alertDialog.setNegativeButton("NO") { dialog, _ -> dialog.cancel() }
+
+        alertDialog.show()
+    }
+
+    private fun parseCoordinates(coordinates: String) {
+        val regex =
+            "([0-9]{1,2})h([0-9]{1,2})m([0-9]{1,2})s/([+,-])([0-9]{1,2}).([0-9]{1,2}).([0-9]{1,2})."
+        val pattern: Pattern = Pattern.compile(regex)
+        val matcher: Matcher = pattern.matcher(coordinates)
+
+        while (matcher.find()) {
+            val hour = matcher.group(1)
+            val minute = matcher.group(2)
+            val second = matcher.group(3)
+
+            if (hour == null || minute == null || second==null) {
+                Toast.makeText(this, "Can't parse hour angle: $hour h $minute m $second s", Toast.LENGTH_LONG).show()
+                return
+            }
+            val hourAngle = HourAngle(hour.toInt(), minute.toInt(), second.toInt())
+
+            val angle = matcher.group(5)
+            val angleMinute = matcher.group(6)
+            val angleSecond = matcher.group(7)
+
+            if (angle == null || angleMinute == null || angleSecond==null) {
+                Toast.makeText(this, "Can't parse azimuth: $angle d $angleMinute m $angleSecond s", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            val declination = Declination(angle.toInt(), angleMinute.toInt(), angleSecond.toInt())
+
+            this.setHourAngle(hourAngle, getString(R.string.user))
+            this.declination = declination
+
+        }
     }
 
     public override fun onSaveInstanceState(savedInstanceState: Bundle) {
@@ -238,7 +313,7 @@ class MainActivity : Activity() {
 
     private fun setToTextView(textView: TextView, value: Int, tag: String?) {
         //no tag - not changing by user
-        if (textView.tag == null || textView.tag.toString() != "user") {
+        if (textView.tag == null || textView.tag.toString() != getString(R.string.user)) {
             val oldValue = textView.text.toString()
             val newValue: String = String.format(Locale.ENGLISH, "%d", value)
             if (oldValue != newValue) {
@@ -256,54 +331,63 @@ class MainActivity : Activity() {
         editText.addTextChangedListener(EditTextWatcher(editText, this))
         editText.filters = arrayOf<InputFilter>(MinMaxInputFilter(-89, 89))
         findViewById<View>(R.id.buttonDeclDegreeUp).setOnClickListener(
-                ArrowButtonOnClickListener(this))
+            ArrowButtonOnClickListener(this)
+        )
         findViewById<View>(R.id.buttonDeclDegreeDown).setOnClickListener(
-                ArrowButtonOnClickListener(this)
+            ArrowButtonOnClickListener(this)
         )
         editText = findViewById(R.id.hAngHour)
         editText.addTextChangedListener(EditTextWatcher(editText, this))
         editText.filters = arrayOf<InputFilter>(MinMaxInputFilter(0, 23))
         findViewById<View>(R.id.buttonHourUp).setOnClickListener(
-                ArrowButtonOnClickListener(this))
+            ArrowButtonOnClickListener(this)
+        )
         findViewById<View>(R.id.buttonHourDown).setOnClickListener(
-                ArrowButtonOnClickListener(this)
+            ArrowButtonOnClickListener(this)
         )
         val minSecInputFilter = MinMaxInputFilter(0, 59)
         editText = findViewById(R.id.hAngMinute)
         editText.addTextChangedListener(EditTextWatcher(editText, this))
         editText.filters = arrayOf<InputFilter>(minSecInputFilter)
         findViewById<View>(R.id.buttonMinuteUp).setOnClickListener(
-                ArrowButtonOnClickListener(this))
+            ArrowButtonOnClickListener(this)
+        )
         findViewById<View>(R.id.buttonMinuteDown).setOnClickListener(
-                ArrowButtonOnClickListener(this)
+            ArrowButtonOnClickListener(this)
         )
         editText = findViewById(R.id.hAngSecond)
         editText.addTextChangedListener(EditTextWatcher(editText, this))
         editText.filters = arrayOf<InputFilter>(minSecInputFilter)
         findViewById<View>(R.id.buttonSecondUp).setOnClickListener(
-                ArrowButtonOnClickListener(this))
+            ArrowButtonOnClickListener(this)
+        )
         findViewById<View>(R.id.buttonSecondDown).setOnClickListener(
-                ArrowButtonOnClickListener(this)
+            ArrowButtonOnClickListener(this)
         )
         editText = findViewById(R.id.declMinute)
         editText.addTextChangedListener(EditTextWatcher(editText, this))
         editText.filters = arrayOf<InputFilter>(minSecInputFilter)
         findViewById<View>(R.id.buttonDeclMinuteUp).setOnClickListener(
-                ArrowButtonOnClickListener(this))
+            ArrowButtonOnClickListener(this)
+        )
         findViewById<View>(R.id.buttonDeclMinuteDown).setOnClickListener(
-                ArrowButtonOnClickListener(this)
+            ArrowButtonOnClickListener(this)
         )
         editText = findViewById(R.id.declSecond)
         editText.addTextChangedListener(EditTextWatcher(editText, this))
         editText.filters = arrayOf<InputFilter>(minSecInputFilter)
         findViewById<View>(R.id.buttonDeclSecondUp).setOnClickListener(
-                ArrowButtonOnClickListener(this))
+            ArrowButtonOnClickListener(this)
+        )
         findViewById<View>(R.id.buttonDeclSecondDown).setOnClickListener(
-                ArrowButtonOnClickListener(this)
+            ArrowButtonOnClickListener(this)
         )
     }
 
-    internal inner class EditTextWatcher(private val editText: EditText, private val mainActivity: MainActivity) : TextWatcher {
+    internal inner class EditTextWatcher(
+        private val editText: EditText,
+        private val mainActivity: MainActivity
+    ) : TextWatcher {
         override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
         override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
             if (editText.tag != null && editText.tag.toString() == "thread") return
@@ -322,119 +406,6 @@ class MainActivity : Activity() {
 
     }
 
-    internal class GotoHandler(activity: MainActivity) : Handler() {
-        private val mainActivityWeakReference: WeakReference<MainActivity> = WeakReference(activity)
-        override fun handleMessage(msg: Message) {
-            val hourAngle = msg.obj as HourAngle
-            val mainActivity = mainActivityWeakReference.get()
-            mainActivity!!.setHourAngle(hourAngle, "thread")
-        }
-    }
-
-    internal class BTHandler(activity: MainActivity) : Handler() {
-        private val bActivity: WeakReference<MainActivity> = WeakReference(activity)
-
-        @SuppressLint("SetTextI18n")
-        override fun handleMessage(message: Message) {
-            val s = message.obj as String
-            val mainActivity = bActivity.get()
-            when (s) {
-                "CONNECTED" -> {
-                    Toast.makeText(mainActivity!!.applicationContext,
-                            "Connected.", Toast.LENGTH_SHORT).show()
-                    mainActivity.findViewById<View>(R.id.joystickView).isEnabled = true
-                    mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = true
-                    mainActivity.findViewById<View>(R.id.motorButton).isEnabled = true
-                    mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = true
-                    mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = true
-                    mainActivity.findViewById<View>(R.id.connectButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = true
-                    mainActivity.connected = true
-                }
-                "DISCONNECTED" -> {
-                    Toast.makeText(mainActivity!!.applicationContext,
-                            "Disconnected.", Toast.LENGTH_SHORT).show()
-                    mainActivity.findViewById<View>(R.id.joystickView).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.motorButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.connectButton).isEnabled = true
-                    mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = false
-                    mainActivity.connected = false
-                }
-                "CONNECTION FAILED" -> {
-                    Toast.makeText(mainActivity!!.applicationContext,
-                            "Connection failed!.", Toast.LENGTH_SHORT).show()
-                    btt = null
-                    mainActivity.findViewById<View>(R.id.joystickView).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.motorButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = false
-                    mainActivity.findViewById<View>(R.id.connectButton).isEnabled = true
-                    mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = false
-                    mainActivity.connected = false
-                }
-                else -> {
-                }
-            }
-        }
-
-    }
-
-    internal class ArrowButtonOnClickListener(private val mainActivity: MainActivity) : View.OnClickListener {
-        override fun onClick(v: View) {
-            val coordinate: Coordinate
-            val viewType: String
-            val direction: String
-            val valueType: String
-            val tag: Array<String> = v.tag.toString().split("#").toTypedArray()
-            viewType = tag[0]
-            valueType = tag[1]
-            direction = tag[2]
-            coordinate = when {
-                viewType.startsWith("H") -> {
-                    mainActivity.hourAngle
-                }
-                viewType.startsWith("D") -> {
-                    mainActivity.declination
-                }
-                else -> {
-                    throw IllegalArgumentException("Unknown viewTye $viewType")
-                }
-            }
-            when (valueType) {
-                "H" -> if (direction == "UP") {
-                    coordinate.plusHour()
-                } else {
-                    coordinate.minusHour()
-                }
-                "M" -> if (direction == "UP") {
-                    coordinate.plusMinute()
-                } else {
-                    coordinate.minusMinute()
-                }
-                "S" -> if (direction == "UP") {
-                    coordinate.plusSecond()
-                } else {
-                    coordinate.minusSecond()
-                }
-                "D" -> if (direction == "UP") {
-                    coordinate.plusDegree()
-                } else {
-                    coordinate.minusDegree()
-                }
-            }
-            if (coordinate is HourAngle) {
-                mainActivity.setHourAngle(coordinate, "user")
-            } else {
-                mainActivity.declination = coordinate as Declination
-            }
-        }
-
-    }
-
     companion object {
         // Tag for logging
         private const val TAG = "MainActivity"
@@ -444,8 +415,8 @@ class MainActivity : Activity() {
         private const val address = "98:D3:81:FD:57:31"
         private const val CONNECTED_STATE = "connectedState"
         private const val GOTO_STATE = "gotoState"
-        private const val X_MAX = 100
-        private const val Y_MAX = 100
+        private const val X_MAX = 10
+        private const val Y_MAX = 10
 
         // The thread that does all the work
         var btt: BluetoothThread? = null

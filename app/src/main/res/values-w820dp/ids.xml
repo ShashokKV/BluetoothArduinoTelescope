@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="coordinates_dialog_edit_text" type="id" />
+    <item name="coordinates_dialog_title" type="id" />
+</resources>

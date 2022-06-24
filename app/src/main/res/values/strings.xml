@@ -23,4 +23,10 @@
     <string name="motor_on">MOTOR ON</string>
     <string name="motor_off">MOTOR OFF</string>
     <string name="update_position">UPDATE POSITION</string>
+    <string name="enter_coordinates">ENTER COORDINATES</string>
+    <string name="ok">Ok</string>
+    <string name="cancel">Cancel</string>
+    <string name="enter_coordinates_dialog">Paste coordinates</string>
+    <string name="user">user</string>
+    <string name="thread">thread</string>
 </resources>

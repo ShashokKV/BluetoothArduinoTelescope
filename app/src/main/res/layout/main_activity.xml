@@ -294,6 +294,14 @@
             android:orientation="vertical"
             android:weightSum="1">
 
+            <Button
+                android:id="@+id/enterCoordinatesButton"
+                style="@style/AppTheme"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="0.1"
+                android:text="@string/enter_coordinates"/>
+
             <ToggleButton
                 android:id="@+id/motorButton"
                 style="@style/AppTheme"
@@ -334,7 +342,7 @@
                 android:id="@+id/joystickView"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="0.6"
+                android:layout_weight="0.5"
                 android:layout_gravity="center_horizontal"
                 custom:JV_backgroundColor="#132255"
                 custom:JV_buttonColor="#DCCFC4C4" />
