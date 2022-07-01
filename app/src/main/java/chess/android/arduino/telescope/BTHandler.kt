@@ -21,7 +21,6 @@ class BTHandler(activity: MainActivity) : Handler() {
                 mainActivity.findViewById<View>(R.id.joystickView).isEnabled = true
                 mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = true
                 mainActivity.findViewById<View>(R.id.motorButton).isEnabled = true
-                mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = true
                 mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = true
                 mainActivity.findViewById<View>(R.id.connectButton).isEnabled = false
                 mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = true
@@ -33,7 +32,6 @@ class BTHandler(activity: MainActivity) : Handler() {
                 mainActivity.findViewById<View>(R.id.joystickView).isEnabled = false
                 mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = false
                 mainActivity.findViewById<View>(R.id.motorButton).isEnabled = false
-                mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = false
                 mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = false
                 mainActivity.findViewById<View>(R.id.connectButton).isEnabled = true
                 mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = false
@@ -46,7 +44,6 @@ class BTHandler(activity: MainActivity) : Handler() {
                 mainActivity.findViewById<View>(R.id.joystickView).isEnabled = false
                 mainActivity.findViewById<View>(R.id.gotoButton).isEnabled = false
                 mainActivity.findViewById<View>(R.id.motorButton).isEnabled = false
-                mainActivity.findViewById<View>(R.id.calibrateButton).isEnabled = false
                 mainActivity.findViewById<View>(R.id.updatePosButton).isEnabled = false
                 mainActivity.findViewById<View>(R.id.connectButton).isEnabled = true
                 mainActivity.findViewById<View>(R.id.disconnectButton).isEnabled = false

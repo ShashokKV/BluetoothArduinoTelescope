@@ -19,12 +19,11 @@
     <string name="setGoto">Goto</string>
     <string name="textGoto">GOTO</string>
     <string name="zero">0</string>
-    <string name="calibrate">CALIBRATE</string>
     <string name="motor_on">MOTOR ON</string>
     <string name="motor_off">MOTOR OFF</string>
     <string name="update_position">UPDATE POSITION</string>
     <string name="enter_coordinates">ENTER COORDINATES</string>
-    <string name="ok">Ok</string>
+    <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="enter_coordinates_dialog">Paste coordinates</string>
     <string name="user">user</string>

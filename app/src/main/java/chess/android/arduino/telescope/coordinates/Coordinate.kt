@@ -50,7 +50,8 @@ abstract class Coordinate internal constructor(hour: Int, minute: Int, second: I
     abstract fun toDegrees(): Double
 
     init {
-        require(!(hour > 24 || hour < 0 || minute > 59 || minute < 0 || second > 59 || second < 0)) { String.format("Illegal time: %d, %d, %d", hour, minute, second) }
+        require(!(hour > 24 || hour < 0 || minute > 59 || minute < 0 || second > 59 || second < 0))
+        { String.format("Illegal time: %d, %d, %d", hour, minute, second) }
         timer = LocalTime.of(hour, minute, second)
     }
 }

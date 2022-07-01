@@ -149,15 +149,6 @@ class MainActivity : Activity() {
             gotoOn = isChecked
         }
 
-        val calibrateButton = findViewById<Button>(R.id.calibrateButton)
-        calibrateButton.isEnabled = connected
-        calibrateButton.setOnClickListener {
-            val msg = Message.obtain()
-            msg.obj = "M1"
-            btWriteHandler!!.sendMessage(msg)
-            motorButton.isChecked = true
-        }
-
         val updatePositionButton = findViewById<Button>(R.id.updatePosButton)
         updatePositionButton.isEnabled = connected
         updatePositionButton.setOnClickListener {
@@ -227,7 +218,11 @@ class MainActivity : Activity() {
 
         alertDialog.setPositiveButton("YES") { _, _ ->
             val coordinates = input.text.toString()
-            parseCoordinates(coordinates)
+            try {
+                parseCoordinates(coordinates)
+            }catch (e: Exception) {
+                Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+            }
         }
 
         alertDialog.setNegativeButton("NO") { dialog, _ -> dialog.cancel() }
@@ -252,13 +247,18 @@ class MainActivity : Activity() {
             }
             val hourAngle = HourAngle(hour.toInt(), minute.toInt(), second.toInt())
 
-            val angle = matcher.group(5)
+            val sign = matcher.group(4)
+            var angle = matcher.group(5)
             val angleMinute = matcher.group(6)
             val angleSecond = matcher.group(7)
 
             if (angle == null || angleMinute == null || angleSecond==null) {
                 Toast.makeText(this, "Can't parse azimuth: $angle d $angleMinute m $angleSecond s", Toast.LENGTH_LONG).show()
                 return
+            }
+
+            if (sign!=null && sign=="-") {
+                angle = "-$angle"
             }
 
             val declination = Declination(angle.toInt(), angleMinute.toInt(), angleSecond.toInt())
